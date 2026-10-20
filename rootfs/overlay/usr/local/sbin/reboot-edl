@@ -1,0 +1,22 @@
+#!/usr/bin/python3
+# Restart the display module into the Qualcomm EDL (download) mode
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+# In EDL mode the eMMC can be written from a PC (bkerler/edl), eg to
+# install a new image or to restore the stock Android; see docs/INSTALL.md.
+import ctypes, os, sys
+
+LINUX_REBOOT_MAGIC1 = 0xfee1dead
+LINUX_REBOOT_MAGIC2 = 672274793
+LINUX_REBOOT_CMD_RESTART2 = 0xa1b2c3d4
+
+if os.geteuid() != 0:
+    sys.exit("run as root: sudo reboot-edl")
+os.sync()
+libc = ctypes.CDLL(None, use_errno=True)
+libc.syscall(88, LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+             LINUX_REBOOT_CMD_RESTART2, ctypes.c_char_p(b"edl"))
+sys.exit("reboot failed: %s" % os.strerror(ctypes.get_errno()))

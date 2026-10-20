@@ -1,0 +1,51 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          j1-network
+# Required-Start:    j1-hardware $local_fs
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: WLAN of the Snapmaker J1 display module
+# Description:       Loads the stock prima WLAN driver, starts
+#                    wpa_supplicant and dhcpcd on wlan0.
+### END INIT INFO
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+# Networks are configured in /etc/wpa_supplicant/wpa_supplicant.conf.
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+CONF=/etc/wpa_supplicant/wpa_supplicant.conf
+
+case "$1" in
+    start)
+        lsmod | grep -q "^wlan " ||
+            insmod /lib/modules/3.10.49/pronto_wlan.ko
+        # The driver creates wlan0 once the WCNSS core has booted
+        i=0
+        while ! ip link show wlan0 > /dev/null 2>&1; do
+            i=$((i + 1))
+            [ $i -gt 30 ] && { echo "j1-network: no wlan0"; exit 1; }
+            sleep 1
+        done
+        start-stop-daemon --start --quiet --exec /sbin/wpa_supplicant \
+            -- -B -i wlan0 -D nl80211 -c $CONF -P /run/wpa_supplicant.pid
+        start-stop-daemon --start --quiet --exec /usr/sbin/dhcpcd \
+            -- -b -q wlan0
+        ;;
+    stop)
+        dhcpcd -x wlan0 2> /dev/null
+        start-stop-daemon --stop --quiet --pidfile /run/wpa_supplicant.pid
+        ;;
+    restart)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+exit 0

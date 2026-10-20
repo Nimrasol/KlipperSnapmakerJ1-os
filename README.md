@@ -1,10 +1,12 @@
 # KlipperSnapmakerJ1-os
 
-Linux image for the display module of the Snapmaker J1 (Quectel SC20-W),
-so that the display runs Klipper, Moonraker and KlipperScreen like a
-Raspberry Pi does on other printers.
+Linux for the display module of the Snapmaker J1 (Quectel SC20-W), so that
+the display runs Klipper, Moonraker and KlipperScreen like a Raspberry Pi
+does on other printers.
 
-> **Status:** planned.  This repository does not contain a build yet.
+> **Status: experimental.**  The image builds, the boot image signature is
+> verified against the stock one, and the user space is tested in
+> emulation.  It has not been booted on a printer yet.
 
 This project is not affiliated with or endorsed by Snapmaker.
 
@@ -17,22 +19,49 @@ This project is not affiliated with or endorsed by Snapmaker.
 
 The image is installed once.  Afterwards everything printer specific comes
 from [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1)
-and is updated through the Moonraker update manager; Klipper, Moonraker
-and KlipperScreen are updated through their own entries.
+and is updated through the Moonraker update manager, like Klipper,
+Moonraker and KlipperScreen.
 
-## Planned content
+## How it works
 
-* Build of a Linux system for the SC20-W (kernel, display and touch
-  drivers, root file system), built on a PC or with GitHub Actions and
-  published as release images.
-* Serial connection to the main controller (`/dev/ttyMSM1`), power and
-  display handling of the J1.
-* Klipper, Moonraker and KlipperScreen preinstalled, with
-  KlipperSnapmakerJ1 set up by its `install.sh`.
-* Instructions to flash the image and to return to the stock Android
-  system.
+* The **stock kernel** of the display module (no source available) boots
+  a small initramfs of this project instead of Android.  The locked
+  bootloader accepts it: it trusts the public AOSP test key, which signs
+  the boot image ([analysis](docs/ANALYSIS.md#verified-boot)).
+* The initramfs mounts the **userdata partition**, which holds Debian
+  bookworm (armhf) with sysvinit, Klipper, Moonraker, KlipperScreen and
+  KlipperSnapmakerJ1.
+* X runs on the framebuffer with the touch screen; the main controller is
+  on `/dev/ttyHSL1`; WLAN uses the stock driver; a USB network gives SSH
+  access for setup and rescue.
+* The bootloader, Android system and firmware partitions stay unchanged;
+  your EDL backup restores the stock system.
+
+Details: [analysis of the module](docs/ANALYSIS.md),
+[design](docs/DESIGN.md), [installation](docs/INSTALL.md).
+
+## Building
+
+```
+./build.sh /path/to/sc20w-emmc-full.bin [../KlipperSnapmakerJ1]
+```
+
+Needs Docker and `qemu-user-static` on Linux or WSL2, and a full eMMC dump
+of your own display module: the stock kernel, the WLAN driver and
+firmware and the Snapmaker calibration pictures are taken from it and are
+not part of this repository.
+
+| Path | Content |
+| --- | --- |
+| `build.sh` | builds `out/boot.img` and `out/userdata.img` |
+| `tools/` | boot image unpack/pack and signing, extraction from the dump |
+| `initramfs/` | `/init` (find and mount the root file system, rescue shell) |
+| `rootfs/` | Debian packages, setup of the Klipper stack, boot scripts, configuration |
+| `docs/` | analysis, design, installation |
 
 ## License
 
-GNU GPLv3 for the build scripts of this repository.  Third-party
-components keep their own licenses.
+GNU GPLv3 for the files of this repository, see [LICENSE](LICENSE).
+Debian, Klipper, Moonraker and KlipperScreen keep their licenses.  The
+AOSP test key is published by the Android Open Source Project under the
+Apache License 2.0 and downloaded at build time.
