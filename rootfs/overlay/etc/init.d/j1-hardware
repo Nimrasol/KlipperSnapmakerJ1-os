@@ -1,0 +1,153 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          j1-hardware
+# Required-Start:    mountkernfs
+# Required-Stop:
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: Snapmaker J1 display module hardware
+# Description:       Device nodes (mdev), stock firmware partitions,
+#                    display, touch screen configuration and USB network.
+### END INIT INFO
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+
+. /etc/klipper-os.conf
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+partition() {
+    for uevent in /sys/class/block/*/uevent; do
+        if grep -qx "PARTNAME=$1" "$uevent"; then
+            echo "/dev/$(sed -n 's/^DEVNAME=//p' "$uevent")"
+            return 0
+        fi
+    done
+    return 1
+}
+
+touch_device() {
+    for name in /sys/class/input/event*/device/name; do
+        if grep -qi "$TOUCH_MATCH" "$name"; then
+            echo "/dev/input/$(basename "$(dirname "$(dirname "$name")")")"
+            return 0
+        fi
+    done
+    return 1
+}
+
+matrix() {
+    # Coordinate transformation of the touch input for a rotation (the
+    # matrices of xrandr --rotate right, left and inverted)
+    case "$1" in
+        CW)  echo "0 1 0 -1 0 1 0 0 1" ;;
+        CCW) echo "0 -1 1 1 0 0 0 0 1" ;;
+        UD)  echo "-1 0 1 0 -1 1 0 0 1" ;;
+        *)   echo "1 0 0 0 1 0 0 0 1" ;;
+    esac
+}
+
+display() {
+    # Backlight on, framebuffer unblanked; the MDSS framebuffer only shows
+    # new content after a pan, which fb-refresher does periodically
+    echo "$BACKLIGHT" > /sys/class/leds/lcd-backlight/brightness 2>/dev/null
+    echo 0 > /sys/class/graphics/fb0/blank 2>/dev/null
+    start-stop-daemon --start --quiet --background --make-pidfile \
+        --pidfile /run/fb-refresher.pid --exec /usr/local/sbin/fb-refresher \
+        -- /dev/fb0
+
+    touch_rotation=$TOUCH_ROTATION
+    [ "$touch_rotation" = SAME ] && touch_rotation=$ROTATION
+    device=$(touch_device) || device=/dev/input/event0
+    mkdir -p /etc/X11/xorg.conf.d
+    cat > /etc/X11/xorg.conf.d/20-j1.conf <<EOF
+# Written at boot by /etc/init.d/j1-hardware from /etc/klipper-os.conf
+Section "ServerFlags"
+    Option "AutoAddDevices" "false"
+    Option "BlankTime" "0"
+    Option "StandbyTime" "0"
+    Option "SuspendTime" "0"
+    Option "OffTime" "0"
+EndSection
+
+Section "Device"
+    Identifier "fb"
+    Driver "fbdev"
+    Option "fbdev" "/dev/fb0"
+    Option "Rotate" "$ROTATION"
+EndSection
+
+Section "InputDevice"
+    Identifier "touch"
+    Driver "evdev"
+    Option "Device" "$device"
+    Option "TransformationMatrix" "$(matrix "$touch_rotation")"
+EndSection
+
+Section "ServerLayout"
+    Identifier "j1"
+    Screen "screen"
+    InputDevice "touch" "CorePointer"
+EndSection
+
+Section "Screen"
+    Identifier "screen"
+    Device "fb"
+EndSection
+EOF
+}
+
+firmware() {
+    # NON-HLOS (WCNSS firmware, found by the kernel in /firmware/image) and
+    # persist (WLAN calibration) of the stock system, read only
+    mkdir -p /firmware /persist
+    dev=$(partition modem) && mount -t vfat -o ro,shortname=lower \
+        "$dev" /firmware
+    dev=$(partition persist) && mount -t ext4 -o ro "$dev" /persist
+}
+
+usb_network() {
+    usb=/sys/class/android_usb/android0
+    [ "$USB_NETWORK" = yes ] && [ -d $usb ] || return 0
+    echo 0 > $usb/enable
+    echo 18d1 > $usb/idVendor
+    echo d002 > $usb/idProduct
+    echo rndis > $usb/functions
+    echo 1 > $usb/enable
+    sleep 1
+    for iface in rndis0 usb0; do
+        if ip link show $iface > /dev/null 2>&1; then
+            ip addr add "$USB_ADDRESS/24" dev $iface
+            ip link set $iface up
+            break
+        fi
+    done
+}
+
+case "$1" in
+    start)
+        for helper in /proc/sys/kernel/hotplug /sys/kernel/uevent_helper; do
+            [ -e $helper ] && echo /sbin/mdev > $helper && break
+        done
+        mdev -s
+        mkdir -p /dev/pts /dev/shm
+        mountpoint -q /dev/pts || mount -t devpts -o gid=5,mode=620 devpts \
+            /dev/pts
+        mountpoint -q /dev/shm || mount -t tmpfs -o mode=1777 tmpfs /dev/shm
+        # Loopback: KlipperScreen reaches Moonraker on localhost (no
+        # ifupdown or systemd-networkd brings it up)
+        ip link set lo up
+        firmware
+        display
+        usb_network
+        ;;
+    stop)
+        start-stop-daemon --stop --quiet --pidfile /run/fb-refresher.pid
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
+exit 0

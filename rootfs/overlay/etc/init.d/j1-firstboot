@@ -1,0 +1,37 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          j1-firstboot
+# Required-Start:    j1-hardware
+# Required-Stop:
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: First boot of KlipperSnapmakerJ1-os
+# Description:       Grows the root file system to the userdata partition
+#                    and creates the SSH host keys of this device.
+### END INIT INFO
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MARK=/var/lib/klipper-os/firstboot-done
+
+case "$1" in
+    start)
+        [ -e $MARK ] && exit 0
+        root=$(awk '$2 == "/" && $1 != "rootfs" {print $1}' /proc/mounts)
+        # The image is smaller than the partition; ext4 grows online
+        resize2fs "$root" > /var/log/firstboot-resize.log 2>&1
+        rm -f /etc/ssh/ssh_host_*
+        ssh-keygen -A > /dev/null
+        mkdir -p "$(dirname $MARK)"
+        touch $MARK
+        ;;
+    stop) ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
+exit 0
