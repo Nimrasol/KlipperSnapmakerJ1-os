@@ -1,4 +1,4 @@
-# klipper-snapmaker-j1-os
+# KlipperSnapmakerJ1-os
 
 Linux image for the display module of the Snapmaker J1 (Quectel SC20-W),
 so that the display runs Klipper, Moonraker and KlipperScreen like a
@@ -12,11 +12,11 @@ This project is not affiliated with or endorsed by Snapmaker.
 
 | Repository | Content |
 | --- | --- |
-| [klipper-snapmaker-j1](https://github.com/Nimrasol/klipper-snapmaker-j1) | Klipper modules, printer configuration, KlipperScreen add-on and theme, main controller firmware patch |
-| **klipper-snapmaker-j1-os** (this one) | Linux image for the J1 display module, the Klipper host |
+| [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1) | Klipper modules, printer configuration, KlipperScreen add-on and theme, main controller firmware patch |
+| **KlipperSnapmakerJ1-os** (this one) | Linux image for the J1 display module, the Klipper host |
 
 The image is installed once.  Afterwards everything printer specific comes
-from [klipper-snapmaker-j1](https://github.com/Nimrasol/klipper-snapmaker-j1)
+from [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1)
 and is updated through the Moonraker update manager; Klipper, Moonraker
 and KlipperScreen are updated through their own entries.
 
@@ -28,7 +28,7 @@ and KlipperScreen are updated through their own entries.
 * Serial connection to the main controller (`/dev/ttyMSM1`), power and
   display handling of the J1.
 * Klipper, Moonraker and KlipperScreen preinstalled, with
-  klipper-snapmaker-j1 set up by its `install.sh`.
+  KlipperSnapmakerJ1 set up by its `install.sh`.
 * Instructions to flash the image and to return to the stock Android
   system.
 
