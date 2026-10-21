@@ -33,7 +33,9 @@ KLIPPER_DIR=~/klipper KlipperSnapmakerJ1/firmware/build.sh
 
 (needs `gcc-arm-none-eabi`), copy `KlipperSnapmakerJ1/firmware/out/update.bin`
 to a USB stick and install it with the display's firmware update from
-USB.  Afterwards the stock display can no longer control the printer.
+USB.  Afterwards the stock display can no longer control the printer;
+later firmware updates are installed from Linux with
+`scripts/snapmaker_j1_flash.py` (see the docs of KlipperSnapmakerJ1).
 
 ## 2. Build the image
 
@@ -100,8 +102,10 @@ root file system enters this shell on purpose.
 
 ## Back to the stock system
 
-1. Main controller: request its bootloader and install a stock update
-   package (see the docs of KlipperSnapmakerJ1).
+1. Main controller, while Linux still runs: stop Klipper and install a
+   stock `mc.bin` with `scripts/snapmaker_j1_flash.py` of
+   KlipperSnapmakerJ1 (the cached package of the stock display is in
+   the backup at `/data/data/com.snapmaker.j1/app_update/mc.bin`).
 2. Display module, from your backup:
    ```
    tools/extract_partition.py sc20w-emmc-full.bin boot boot-stock.img
