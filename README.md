@@ -10,12 +10,13 @@ does on other printers.
 
 This project is not affiliated with or endorsed by Snapmaker.
 
-## Related repository
+## Related repositories
 
 | Repository | Content |
 | --- | --- |
 | [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1) | Klipper modules, printer configuration, KlipperScreen add-on and theme, main controller firmware patch |
 | **KlipperSnapmakerJ1-os** (this one) | Linux image for the J1 display module, the Klipper host |
+| [Nimrasol/klipper](https://github.com/Nimrasol/klipper/tree/j1), branch `j1` | Klipper fork with the firmware changes (GD32F305, J1 factory bootloader) as commits on Klipper; the same changes as `firmware/klipper-gd32f305-snapmaker.patch`. The printer runs unmodified Klipper |
 
 The image is installed once.  Afterwards everything printer specific comes
 from [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1)
