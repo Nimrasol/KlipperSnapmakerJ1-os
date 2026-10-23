@@ -44,6 +44,8 @@ Built with `mmdebstrap` (`rootfs/build.sh`), packages in
 | Network | NetworkManager, `wcn36xx` | KlipperScreen's network panel uses NetworkManager |
 | Time | systemd-timesyncd | the module has no battery backed clock |
 | Access | SSH (user `pi`) | |
+| Web interface | Mainsail behind `nginx-light` (port 80, Moonraker proxied as in MainsailOS) | works without internet; Moonraker updates it |
+| Network name | `avahi-daemon` (`<hostname>.local`), `libnss-myhostname` | renamed in KlipperScreen (More → Network Name) through NetworkManager and avahi, without root rights |
 
 The root file system is about 2.3 GB and grows to the userdata partition (4.9 GiB)
 on the first boot.  Measured on the printer: about 0.8 s kernel and
@@ -59,6 +61,7 @@ on the first boot.  Measured on the printer: about 0.8 s kernel and
 | `wcnss-firmware` | loads the WLAN firmware once `/firmware` and `/persist` are mounted |
 | `j1-firstboot` | grows the root file system once |
 | `ssh` (drop-in) | creates the host keys of the device before the first start |
+| `nginx`, `avahi-daemon` | Mainsail and the `.local` name |
 
 Not started at boot: `NetworkManager-wait-online`, the apt, man-db and
 e2scrub timers.  The journal is limited in size.

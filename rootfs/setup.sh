@@ -12,6 +12,8 @@ export DEBIAN_FRONTEND=noninteractive LC_ALL=C.UTF-8
 PIP_INDEX="--extra-index-url https://www.piwheels.org/simple"
 HOME_DIR=/home/pi
 J1=$HOME_DIR/KlipperSnapmakerJ1
+# Mainsail release in the image; Moonraker updates it afterwards
+MAINSAIL_VERSION=v2.19.0
 
 # Locale and time zone
 echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
@@ -37,7 +39,8 @@ chmod 0755 /usr/local/sbin/j1-firstboot /usr/local/sbin/j1-chvt \
 # Services; nothing that waits for the network or runs maintenance jobs at
 # boot (short boot time, the printer is switched off without shutdown)
 systemctl enable klipper moonraker KlipperScreen seatd j1-firstboot \
-    wcnss-firmware NetworkManager ssh systemd-timesyncd > /dev/null 2>&1
+    wcnss-firmware NetworkManager ssh systemd-timesyncd nginx \
+    avahi-daemon > /dev/null 2>&1
 systemctl set-default multi-user.target > /dev/null
 systemctl disable NetworkManager-wait-online.service > /dev/null 2>&1 || true
 for unit in apt-daily.timer apt-daily-upgrade.timer man-db.timer \
@@ -88,7 +91,18 @@ done
 
 mkdir -p printer_data/config printer_data/logs printer_data/gcodes \
     printer_data/comms printer_data/database
+
+# Mainsail (web interface, served by nginx)
+curl -sfL -o /tmp/mainsail.zip \
+    https://github.com/mainsail-crew/mainsail/releases/download/$MAINSAIL_VERSION/mainsail.zip
+mkdir -p mainsail
+unzip -q -o /tmp/mainsail.zip -d mainsail
+rm /tmp/mainsail.zip
 "
+
+# nginx serves Mainsail instead of its default page
+rm -f /etc/nginx/sites-enabled/default
+ln -sf ../sites-available/mainsail /etc/nginx/sites-enabled/mainsail
 
 # Moonraker: services through systemctl (pi may use sudo), no system
 # package updates
@@ -127,6 +141,12 @@ validate_service: False
 refresh_interval: 168
 enable_system_updates: False
 
+[update_manager mainsail]
+type: web
+channel: stable
+repo: mainsail-crew/mainsail
+path: ~/mainsail
+
 [update_manager KlipperScreen]
 type: git_repo
 path: ~/KlipperScreen
@@ -155,6 +175,7 @@ rm -f /tmp/base.apk
         echo "$repo $(su pi -c "git -C $HOME_DIR/$repo describe --always \
             --tags")"
     done
+    echo "mainsail $MAINSAIL_VERSION"
 } > /etc/klipper-os-release
 
 apt-get clean
