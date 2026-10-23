@@ -1,0 +1,12 @@
+[Unit]
+Description=Start the WLAN core with the firmware of the modem partition
+RequiresMountsFor=/firmware /persist
+Before=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/modprobe --ignore-install qcom_wcnss_pil
+
+[Install]
+WantedBy=multi-user.target

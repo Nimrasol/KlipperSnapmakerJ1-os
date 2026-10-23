@@ -6,7 +6,7 @@
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
 # Installs Klipper, Moonraker, KlipperScreen and KlipperSnapmakerJ1 for the
-# user pi, the services and the boot scripts.
+# user pi and enables the services.
 set -e
 export DEBIAN_FRONTEND=noninteractive LC_ALL=C.UTF-8
 PIP_INDEX="--extra-index-url https://www.piwheels.org/simple"
@@ -19,49 +19,31 @@ locale-gen > /dev/null
 echo 'LANG="en_US.UTF-8"' > /etc/default/locale
 ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 
-# The stock kernel (ANDROID_PARANOID_NETWORK) only lets members of the
-# Android groups inet and net_raw open network sockets
-groupadd -g 3003 aid_inet
-groupadd -g 3004 aid_net_raw
-groupadd -g 3005 aid_net_admin
-usermod -a -G aid_inet,aid_net_raw,aid_net_admin root
-for user in _apt sshd messagebus; do
-    id "$user" > /dev/null 2>&1 && usermod -a -G aid_inet "$user"
-done
-# Device groups that udev would otherwise create (used by mdev.conf)
-for group in input netdev render; do
-    getent group $group > /dev/null || groupadd -r $group
-done
+# Kernel modules of the mainline kernel (boot/build.sh)
+depmod -a "$(cat /tmp/kernelrelease)"
 
 # User pi (password "klipper", change it after the first login)
-useradd -m -s /bin/bash -G \
-    sudo,dialout,tty,video,input,netdev,aid_inet,aid_net_raw pi
+useradd -m -s /bin/bash -G sudo,dialout,tty,video,input,netdev,render pi
 echo "pi:klipper" | chpasswd
 echo "pi ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/010_pi
 chmod 0440 /etc/sudoers.d/010_pi
 
-# Busybox mdev (the kernel has no devtmpfs)
-ln -sf /bin/busybox /sbin/mdev
-
-# Framebuffer refresher for the MDSS display
-gcc -O2 -Wall -o /usr/local/sbin/fb-refresher /tmp/fb-refresher.c
-
-# Boot scripts; the SSH host keys are created on the first boot
-for script in j1-hardware j1-firstboot j1-network; do
-    chmod 0755 /etc/init.d/$script
-    update-rc.d $script defaults > /dev/null
-done
-update-rc.d ssh defaults > /dev/null
-update-rc.d supervisor defaults > /dev/null
-# udev comes with the X server (a dependency) but needs devtmpfs, which the
-# stock kernel lacks; mdev creates the device nodes instead
-update-rc.d udev disable > /dev/null 2>&1 || true
+# Created on the first boot of each device
 rm -f /etc/ssh/ssh_host_*
+: > /etc/machine-id
+chmod 0755 /usr/local/sbin/j1-firstboot /usr/local/sbin/j1-chvt \
+    /usr/local/bin/j1-session
 
-# supervisorctl for Moonraker (runs as pi)
-sed -i 's/^chmod=0700.*/chmod=0770\nchown=root:pi/' \
-    /etc/supervisor/supervisord.conf
-mkdir -p /var/log/supervisor
+# Services; nothing that waits for the network or runs maintenance jobs at
+# boot (short boot time, the printer is switched off without shutdown)
+systemctl enable klipper moonraker KlipperScreen seatd j1-firstboot \
+    wcnss-firmware NetworkManager ssh systemd-timesyncd > /dev/null 2>&1
+systemctl set-default multi-user.target > /dev/null
+systemctl disable NetworkManager-wait-online.service > /dev/null 2>&1 || true
+for unit in apt-daily.timer apt-daily-upgrade.timer man-db.timer \
+            e2scrub_all.timer e2scrub_reap.service dpkg-db-backup.timer; do
+    systemctl mask "$unit" > /dev/null 2>&1 || true
+done
 
 # Klipper, Moonraker and KlipperScreen at the versions KlipperSnapmakerJ1 is
 # tested with (versions.conf): clones of their own repositories on the
@@ -93,17 +75,23 @@ moonraker-env/bin/pip install -q $PIP_INDEX \
 
 # GTK and cairo come from Debian (python3-gi, python3-cairo)
 python3 -m venv --system-site-packages .KlipperScreen-env
-grep -viE '^(PyGObject|pycairo|sdbus|python-mpv)' \
+grep -viE '^(PyGObject|pycairo|python-mpv)' \
     KlipperScreen/scripts/KlipperScreen-requirements.txt \
     > /tmp/ks-requirements.txt
 .KlipperScreen-env/bin/pip install -q $PIP_INDEX -r /tmp/ks-requirements.txt
 rm /tmp/ks-requirements.txt
 
+# Byte code now, not on the first start of each program
+for d in klipper/klippy moonraker/moonraker KlipperScreen; do
+    python3 -m compileall -q \$d > /dev/null || true
+done
+
 mkdir -p printer_data/config printer_data/logs printer_data/gcodes \
     printer_data/comms printer_data/database
 "
 
-# Moonraker: services through supervisord, no system package updates
+# Moonraker: services through systemctl (pi may use sudo), no system
+# package updates
 cat > $HOME_DIR/printer_data/config/moonraker.conf <<'EOF'
 [server]
 host: 0.0.0.0
@@ -132,8 +120,7 @@ cors_domains:
 [history]
 
 [machine]
-provider: supervisord_cli
-supervisord_config_path: /etc/supervisor/supervisord.conf
+provider: systemd_cli
 validate_service: False
 
 [update_manager]
@@ -161,6 +148,8 @@ rm -f /tmp/base.apk
 # Versions in the image
 {
     echo "KlipperSnapmakerJ1-os build $(date -u +%Y-%m-%d)"
+    cat /tmp/boot-versions
+    echo "kernel $(cat /tmp/kernelrelease)"
     # As pi: git refuses repositories of another user
     for repo in klipper moonraker KlipperScreen KlipperSnapmakerJ1; do
         echo "$repo $(su pi -c "git -C $HOME_DIR/$repo describe --always \

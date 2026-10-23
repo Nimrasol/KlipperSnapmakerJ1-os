@@ -1,2 +1,9 @@
-# <file system> <mount point> <type> <options> <dump> <pass>
-tmpfs /tmp tmpfs defaults,nosuid,nodev 0 0
+# Root file system on the userdata partition (the kernel mounts it, see
+# extlinux.conf); commit=60 limits the data loss when the printer is
+# switched off
+/dev/disk/by-partlabel/userdata  /          ext4  defaults,noatime,commit=60  0 1
+# Firmware of the WLAN core and its calibration, read only from the stock
+# partitions of this display module (loaded by wcnss-firmware.service)
+/dev/disk/by-partlabel/modem     /firmware  vfat  ro,nofail,x-systemd.device-timeout=10s         0 0
+/dev/disk/by-partlabel/persist   /persist   ext4  ro,noload,nofail,x-systemd.device-timeout=10s  0 0
+tmpfs                            /tmp       tmpfs defaults,nosuid,nodev                          0 0

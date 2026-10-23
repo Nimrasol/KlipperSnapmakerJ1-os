@@ -5,18 +5,20 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
-# Usage: rootfs/build.sh STOCK_DIR J1_REPO OUT_DIR
-#   STOCK_DIR  output of tools/extract_stock.py (WLAN driver, firmware)
+# Usage: rootfs/build.sh BOOT_DIR J1_REPO OUT_DIR [APK]
+#   BOOT_DIR   output of boot/build.sh (kernel modules and release)
 #   J1_REPO    checkout of KlipperSnapmakerJ1 to install
 #   OUT_DIR    receives rootfs.tar
+#   APK        stock display application (calibration pictures), optional
 #
 # Runs in a privileged Debian container; the armhf programs of the new
 # system run through the qemu binfmt handler of the build host.
 set -e
 
-STOCK="$(realpath "$1")"
+BOOT="$(realpath "$1")"
 J1="$(realpath "$2")"
 OUT="$(realpath -m "$3")"
+APK="${4:+$(realpath "$4")}"
 SRC="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"
 
@@ -24,9 +26,12 @@ if [ ! -e /proc/sys/fs/binfmt_misc/qemu-arm ]; then
     echo "The build host needs a qemu-arm binfmt handler (qemu-user-static)"
     exit 1
 fi
+APK_MOUNT=
+[ -n "$APK" ] && APK_MOUNT="-v $APK:/apk/base.apk:ro"
 
 docker run --rm --privileged \
-    -v "$SRC:/src:ro" -v "$STOCK:/stock:ro" -v "$J1:/j1:ro" -v "$OUT:/out" \
+    -v "$SRC:/src:ro" -v "$BOOT:/boot-out:ro" -v "$J1:/j1:ro" \
+    -v "$OUT:/out" $APK_MOUNT \
     debian:bookworm bash -e -c '
 apt-get -qq update
 apt-get -qq install -y --no-install-recommends mmdebstrap arch-test \
@@ -36,7 +41,6 @@ apt-get -qq install -y --no-install-recommends mmdebstrap arch-test \
 # system without device nodes and owners (eg a Windows drive under WSL)
 root=/build/rootfs
 mkdir -p $root
-# No recommends, and sysvinit instead of systemd (see packages.txt)
 mmdebstrap --architectures=armhf --variant=minbase \
     --aptopt="APT::Install-Recommends \"false\"" \
     --aptopt="APT::Install-Suggests \"false\"" \
@@ -45,34 +49,26 @@ mmdebstrap --architectures=armhf --variant=minbase \
     bookworm $root http://deb.debian.org/debian
 # Owned by root with default modes (the source may be a Windows drive)
 cp -r --no-preserve=mode,ownership /src/overlay/. $root/
-chmod 0755 $root/etc/init.d/j1-* $root/usr/local/sbin/*
-# Stock parts of the display module (not distributed with this project)
-install -D -m 0644 /stock/system/lib/modules/pronto/pronto_wlan.ko \
-    $root/lib/modules/3.10.49/pronto_wlan.ko
-install -D -m 0644 /stock/system/etc/firmware/wlan/prima/WCNSS_cfg.dat \
-    $root/lib/firmware/wlan/prima/WCNSS_cfg.dat
-install -D -m 0644 /stock/system/etc/wifi/WCNSS_qcom_cfg.ini \
-    $root/lib/firmware/wlan/prima/WCNSS_qcom_cfg.ini
-ln -sf /persist/WCNSS_qcom_wlan_nv.bin \
-    $root/lib/firmware/wlan/prima/WCNSS_qcom_wlan_nv.bin
+cp -r --no-preserve=mode,ownership /boot-out/modules/lib/modules $root/lib/
+cp /boot-out/kernelrelease $root/tmp/kernelrelease
+cp /boot-out/versions $root/tmp/boot-versions
 # A clean clone of the last commit (Moonraker refuses to update a
 # modified checkout)
 git config --global --add safe.directory "*"
 git clone -q /j1 $root/opt/KlipperSnapmakerJ1
-# Stock display application: pictures and test prints of the calibration
-[ -e /stock/base.apk ] && cp /stock/base.apk $root/tmp/base.apk
+[ -e /apk/base.apk ] && cp /apk/base.apk $root/tmp/base.apk
 cp /src/setup.sh $root/tmp/setup.sh
-cp /src/fb-refresher.c $root/tmp/fb-refresher.c
 mount -t proc proc $root/proc
 mount -t sysfs sysfs $root/sys
 mount --bind /dev $root/dev
 cp /etc/resolv.conf $root/etc/resolv.conf
 trap "umount $root/proc $root/sys $root/dev" EXIT
 chroot $root /bin/bash /tmp/setup.sh
-rm -f $root/tmp/setup.sh $root/tmp/fb-refresher.c
+rm -f $root/tmp/setup.sh $root/tmp/kernelrelease $root/tmp/boot-versions
 umount $root/proc $root/sys $root/dev
 trap - EXIT
-echo "nameserver 1.1.1.1" > $root/etc/resolv.conf
+# NetworkManager writes resolv.conf at runtime
+rm -f $root/etc/resolv.conf
 tar -C $root --numeric-owner -cf /out/rootfs.tar .
 du -sh $root
 '

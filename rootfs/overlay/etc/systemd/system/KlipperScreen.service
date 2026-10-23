@@ -1,0 +1,23 @@
+[Unit]
+Description=KlipperScreen
+Wants=seatd.service
+After=seatd.service systemd-user-sessions.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/KlipperScreen
+# cage on the framebuffer of lk2nd (simpledrm) with software rendering;
+# the 720x1280 portrait panel is mounted in landscape: one rotation of
+# 90 degrees clockwise (-r) turns the picture and the touch
+Environment=LIBSEAT_BACKEND=seatd WLR_RENDERER=pixman
+Environment=XDG_RUNTIME_DIR=/run/klipperscreen
+RuntimeDirectory=klipperscreen
+RuntimeDirectoryMode=0700
+ExecStartPre=+/usr/local/sbin/j1-chvt 7
+ExecStart=/usr/bin/cage -d -s -r -- /usr/local/bin/j1-session
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

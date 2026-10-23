@@ -1,11 +1,14 @@
 # Debian bookworm (armhf) packages of KlipperSnapmakerJ1-os
 #
-# Init and devices: sysvinit (the stock kernel 3.10 has no devtmpfs and no
-# fhandle, so systemd and udev cannot run), busybox for mdev
-sysvinit-core
-initscripts
-busybox-static
-procps
+# Kept small for a short boot: no desktop, no display manager, no
+# recommended packages
+#
+# Init and devices
+systemd
+systemd-sysv
+udev
+dbus
+polkitd
 kmod
 e2fsprogs
 # Base tools
@@ -17,12 +20,15 @@ nano
 sudo
 tzdata
 locales
-# Network: WLAN with wpa_supplicant and dhcpcd, SSH
+# Network: WLAN through NetworkManager (KlipperScreen's network panel), SSH
+network-manager
+wpasupplicant
+wireless-regdb
 iproute2
 iputils-ping
+# The display module has no battery backed clock: time from the network
+systemd-timesyncd
 iw
-wpasupplicant
-dhcpcd-base
 openssh-server
 # Klipper, Moonraker and KlipperScreen
 python3
@@ -39,20 +45,19 @@ liblmdb0
 libjpeg62-turbo
 zlib1g
 libffi-dev
+libsystemd-dev
 build-essential
 pkg-config
-supervisor
 # Main controller firmware build (KlipperSnapmakerJ1/firmware/build.sh)
 gcc-arm-none-eabi
 binutils-arm-none-eabi
 libnewlib-arm-none-eabi
 make
-# Display: X on the framebuffer, touch through evdev
-xserver-xorg-core
-xserver-xorg-video-fbdev
-xserver-xorg-input-evdev
-xserver-xorg-legacy
-xinit
-x11-xserver-utils
+# Display: the Wayland kiosk compositor cage on the framebuffer of lk2nd
+# (simpledrm, software rendering); it turns the picture and the touch.
+# This cage version always starts Xwayland.
+cage
+seatd
+xwayland
 fonts-roboto
 fonts-dejavu-core

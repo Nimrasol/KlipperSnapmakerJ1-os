@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+# Switch the console to the given virtual terminal (chvt without the kbd
+# package)
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+import fcntl, sys
+
+VT_ACTIVATE, VT_WAITACTIVE = 0x5606, 0x5607
+vt = int(sys.argv[1])
+with open("/dev/tty0") as tty:
+    fcntl.ioctl(tty, VT_ACTIVATE, vt)
+    fcntl.ioctl(tty, VT_WAITACTIVE, vt)

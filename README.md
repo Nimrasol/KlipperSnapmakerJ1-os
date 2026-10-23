@@ -4,9 +4,10 @@ Linux for the display module of the Snapmaker J1 (Quectel SC20-W), so that
 the display runs Klipper, Moonraker and KlipperScreen like a Raspberry Pi
 does on other printers.
 
-> **Status: experimental.**  The image builds, the boot image signature is
-> verified against the stock one, and the user space is tested in
-> emulation.  It has not been booted on a printer yet.
+> **Status: experimental.**  The image boots on a J1 (board revision 2):
+> KlipperScreen with the J1 theme on the display, WLAN, SSH, Klipper
+> connected to the main controller.  The full calibration on the printer
+> is not tested yet.
 
 This project is not affiliated with or endorsed by Snapmaker.
 
@@ -25,17 +26,22 @@ Moonraker and KlipperScreen.
 
 ## How it works
 
-* The **stock kernel** of the display module (no source available) boots
-  a small initramfs of this project instead of Android.  The locked
-  bootloader accepts it: it trusts the public AOSP test key, which signs
-  the boot image ([analysis](docs/ANALYSIS.md#verified-boot)).
-* The initramfs mounts the **userdata partition**, which holds Debian
-  bookworm (armhf) with sysvinit, Klipper, Moonraker, KlipperScreen and
-  KlipperSnapmakerJ1.
-* X runs on the framebuffer with the touch screen; the main controller is
-  on `/dev/ttyHSL1`; WLAN uses the stock driver; a USB network gives SSH
-  access for setup and rescue.
-* The bootloader, Android system and firmware partitions stay unchanged;
+* The stock bootloader (unchanged) starts
+  [lk2nd](https://github.com/msm8916-mainline/lk2nd) from the **boot
+  partition**.  lk2nd sets up the panel and starts Linux from the
+  **cache partition** (`extlinux.conf`, kernel, device tree).
+* A **mainline kernel** (msm8916-mainline 6.12) with the device tree of
+  the J1 display module.  lk2nd and the device tree are the work of
+  [eazrael](https://wiki.evilazrael.de/snapmaker-j1-klipper-installation);
+  this project builds them from his repositories at fixed commits.
+* The **userdata partition** holds a minimal Debian bookworm (armhf,
+  systemd) with Klipper, Moonraker, KlipperScreen and KlipperSnapmakerJ1.
+  KlipperScreen runs in the Wayland kiosk `cage`, without a desktop.
+  Linux is up about 8 s after the bootloader.
+* The main controller is on `/dev/ttyMSM1`; WLAN uses the open `wcn36xx`
+  driver with the firmware of the module's own modem and persist
+  partitions.
+* The Qualcomm boot chain, Android system and recovery stay unchanged;
   your EDL backup restores the stock system.
 
 Details: [analysis of the module](docs/ANALYSIS.md),
@@ -48,21 +54,20 @@ Details: [analysis of the module](docs/ANALYSIS.md),
 ```
 
 Needs Docker and `qemu-user-static` on Linux or WSL2, and a full eMMC dump
-of your own display module: the stock kernel, the WLAN driver and
-firmware and the Snapmaker calibration pictures are taken from it and are
-not part of this repository.
+of your own display module: the calibration pictures and test prints of
+the Snapmaker application are taken from it and are not part of this
+repository.
 
 | Path | Content |
 | --- | --- |
-| `build.sh` | builds `out/boot.img` and `out/userdata.img` |
-| `tools/` | boot image unpack/pack and signing, extraction from the dump |
-| `initramfs/` | `/init` (find and mount the root file system, rescue shell) |
-| `rootfs/` | Debian packages, setup of the Klipper stack, boot scripts, configuration |
+| `build.sh` | builds `out/lk2nd.img`, `out/linux-boot.img` and `out/userdata.img` |
+| `boot/` | lk2nd and kernel build (pinned commits), `extlinux.conf` |
+| `rootfs/` | Debian packages, setup of the Klipper stack, services, configuration |
+| `tools/` | extraction from the dump |
 | `docs/` | analysis, design, installation |
 
 ## License
 
 GNU GPLv3 for the files of this repository, see [LICENSE](LICENSE).
-Debian, Klipper, Moonraker and KlipperScreen keep their licenses.  The
-AOSP test key is published by the Android Open Source Project under the
-Apache License 2.0 and downloaded at build time.
+lk2nd, Linux, Debian, Klipper, Moonraker and KlipperScreen keep their
+licenses.

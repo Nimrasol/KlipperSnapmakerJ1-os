@@ -1,0 +1,17 @@
+[Unit]
+Description=Klipper
+After=local-fs.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/home/pi/klippy-env/bin/python /home/pi/klipper/klippy/klippy.py \
+    /home/pi/printer_data/config/printer.cfg \
+    -I /home/pi/printer_data/comms/klippy.serial \
+    -l /home/pi/printer_data/logs/klippy.log \
+    -a /home/pi/printer_data/comms/klippy.sock
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

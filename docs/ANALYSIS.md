@@ -14,21 +14,28 @@ module of a Snapmaker J1 (read in Qualcomm EDL mode with
 | Kernel | Linux 3.10.49, built 2022-10-10, zImage with 50 appended device trees (MSM8909 reference boards) |
 | Display | MIPI DSI video mode panel, 720x1280 portrait, mounted in landscape; the bootloader selects one of ili9881c, ili9881d or hx8394f (720p) |
 | Touch | Goodix GT9xx (`goodix,gt9xx`, input device "Goodix-CTP") |
-| Main controller link | BLSP1 UART2: `/dev/ttyHSL1`, 115200 baud in the stock system |
+| Main controller link | BLSP1 UART2: `/dev/ttyHSL1` on the stock kernel (115200 baud in the stock system), `/dev/ttyMSM1` on the mainline kernel |
 
 ## Partitions
 
 | Partition | Index | Size | Use in this image |
 | --- | --- | --- | --- |
-| modem | 1 | 64 MiB | read only, mounted as `/firmware` (WCNSS WLAN firmware) |
+| modem | 1 | 64 MiB | read only, mounted as `/firmware` (WCNSS WLAN firmware for `wcn36xx`) |
 | sbl1, aboot, rpm, tz | | | unchanged (boot chain) |
-| boot | 20 | 32 MiB | **replaced**: stock kernel with the initramfs of this project |
+| boot | 20 | 32 MiB | **replaced**: lk2nd |
 | system | 21 | 1.5 GiB | unchanged (Android) |
 | persist | 22 | 32 MiB | read only, mounted as `/persist` (WLAN calibration) |
 | recovery | 24 | 32 MiB | unchanged |
+| cache | | 256 MiB | **replaced**: ext2 with kernel, device tree and `extlinux.conf` |
 | userdata | 33 | 4.9 GiB | **replaced**: Linux root file system |
 
-## Verified boot
+## Stock kernel (first design, not used any more)
+
+The first design of this project kept the stock Android kernel 3.10 (no
+source available).  The findings stay here because they explain why the
+image now uses lk2nd and a mainline kernel.
+
+### Verified boot
 
 The device is locked (`devinfo`: unlocked 0, tampered 0).  The bootloader
 (LK, `aboot`) verifies the boot image against its embedded key store.  The
@@ -39,12 +46,12 @@ serial `970F983909AA8949` (SHA1 fingerprint
 modulus of this key is embedded in `aboot`.  This is the public AOSP test
 key `verity` (`build/target/product/security/verity.{pk8,x509.pem}`).
 
-`tools/boot_signer.py` re-signs the stock boot image with this key into a
-result that is byte identical to the stock boot partition (image and
-signature), so boot images of this project are accepted by the locked
-bootloader.  No unlocking is needed and the boot chain stays unchanged.
+A boot image re-signed with this key was byte identical to the stock boot
+partition (image and signature), and the locked bootloader started the
+stock kernel with an initramfs of this project.  The bootloader also
+starts lk2nd from the boot partition; no unlocking is needed.
 
-## Kernel
+### Kernel configuration
 
 No kernel source is available, so the image uses the stock kernel from the
 user's own dump.  Its configuration (`/proc/config.gz`, also embedded in
@@ -64,24 +71,28 @@ the zImage) decides what the Linux system can be:
 | `MSM_DLOAD_MODE` | set | `reboot edl` enters the download mode |
 | firmware search path | | `/lib/firmware`, `/firmware/image` |
 
-### UART baud rates
+#### UART baud rates
 
 The UART driver (`msm_hsl_set_baud_rate`, disassembled from the stock
 kernel) supports 300-57600, 115200, 230400, 460800, 921600, 1000000,
 1152000, 1500000, 2500000, 3000000, 3200000, 3500000, 3686400 and 4000000
 baud.  Any other rate (eg Klipper's usual 250000) silently keeps the
-previous setting, so the main controller firmware of KlipperSnapmakerJ1
-uses 230400 baud.
+previous setting.  The main controller firmware of KlipperSnapmakerJ1
+uses 230400 baud, which works with both kernels.
+
+### Why it was given up
+
+On the printer the stock kernel booted the Debian user space, but the
+MDP3/MDSS framebuffer never showed the X output, the prima WLAN driver
+stayed at "WCNSS driver not ready" without Android's services, and the
+front USB port is a USB host outside the EDL mode, so the planned USB
+network for access could not work.
 
 ## Stock parts used
 
 Taken from the dump of the user's printer by `tools/extract_stock.py`, not
-distributed with this project:
-
-* `boot.img`: the kernel (zImage with device trees) and its header
-* `modem.img`: mounted read only; WCNSS firmware in `/firmware/image`
-* `persist.img`: WLAN calibration (`WCNSS_qcom_wlan_nv.bin`)
-* `/system/lib/modules/pronto/pronto_wlan.ko`, `WCNSS_cfg.dat`,
-  `WCNSS_qcom_cfg.ini`: WLAN driver and configuration
-* `/data/app/com.snapmaker.j1-*/base.apk`: pictures and test prints of the
-  calibration menu of KlipperSnapmakerJ1
+distributed with this project: the Snapmaker application
+(`/data/app/com.snapmaker.j1-*/base.apk`), for the pictures and test
+prints of the calibration menu of KlipperSnapmakerJ1.  The WLAN firmware
+and calibration are read on the printer from its own modem and persist
+partitions.
