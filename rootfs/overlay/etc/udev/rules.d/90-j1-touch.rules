@@ -1,0 +1,4 @@
+# The touch screen reports in the portrait coordinates of the panel; cage
+# shows the screen rotated by 90 degrees (cage -r), so rotate the touch the
+# same way (libinput calibration matrix "90 degrees clockwise")
+ENV{ID_INPUT_TOUCHSCREEN}=="1", ATTRS{name}=="Goodix Capacitive TouchScreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0 -1 1 1 0 0"

@@ -1,0 +1,14 @@
+[Unit]
+Description=Moonraker
+After=local-fs.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/home/pi/moonraker-env/bin/python /home/pi/moonraker/moonraker/moonraker.py \
+    -d /home/pi/printer_data
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

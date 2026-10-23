@@ -1,0 +1,12 @@
+#!/bin/sh
+# First boot of KlipperSnapmakerJ1-os: grow the root file system to the
+# userdata partition (the SSH host keys are created by ssh.service)
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+set -e
+mkdir -p /var/lib/klipper-os
+# The image is smaller than the partition; ext4 grows online
+resize2fs "$(findmnt -n -o SOURCE /)" > /var/log/firstboot-resize.log 2>&1 || true
+touch /var/lib/klipper-os/firstboot-done

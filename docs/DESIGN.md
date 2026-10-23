@@ -3,68 +3,92 @@
 The display module becomes a Klipper host like a Raspberry Pi: Debian with
 Klipper, Moonraker, KlipperScreen and
 [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1).
-The constraints come from [ANALYSIS.md](ANALYSIS.md): the stock kernel
-3.10 (no source), a locked bootloader that trusts the AOSP test key, and
-an Android partition layout.
+Goals: as small as possible, a short boot (the printer is switched on and
+off at its mains switch), and nothing changed that the EDL backup cannot
+restore.
 
 ## Boot chain
 
 ```
-PBL -> SBL1 -> TZ/RPM -> LK (aboot, unchanged)
-    -> boot partition: stock kernel + initramfs of this project
-         (signed with the AOSP verity test key)
-    -> initramfs /init: /dev (tmpfs + mdev), find "userdata" by name,
-         mount it, switch_root
-    -> userdata partition: Debian bookworm armhf, sysvinit
+PBL -> SBL1 -> TZ/RPM -> aboot (stock, locked, unchanged)
+    -> boot partition: lk2nd (msm8909, snapmakerj1 target)
+         panel and simple framebuffer, finds extlinux.conf on an ext2
+         partition (the 256 MiB cache partition)
+    -> cache partition: zImage, snapmakerj1.dtb, extlinux/extlinux.conf
+    -> mainline Linux 6.12 (msm8916-mainline), root=PARTLABEL=userdata
+    -> userdata partition: Debian bookworm armhf, systemd
 ```
 
-Everything before the boot partition is untouched; Android's system,
-recovery and firmware partitions stay as they are.  The bootloader still
-selects the panel and passes it to the kernel.
+lk2nd and the device tree of the display module come from
+[eazrael](https://wiki.evilazrael.de/snapmaker-j1-klipper-installation)
+(lk2nd branch `snapmakerj1`, device tree and kernel configuration from his
+armbian-build fork).  `boot/inside.sh` builds both at pinned commits in a
+Debian container; nothing of his Klipper setup is used.
 
-The initramfs offers a rescue shell over USB (RNDIS, telnet to
-192.168.42.1) when the root file system is missing or cannot be mounted,
-or when `/rescue` exists on it.
+The kernel command line (`boot/extlinux.conf`) keeps the console quiet,
+rotates the text console to the landscape mounting and passes lk2nd's
+framebuffer on (`lk2nd.pass-simplefb=autorefresh`): the display runs
+through `simpledrm` on the framebuffer lk2nd set up, so no panel driver is
+needed.
 
 ## Root file system
 
+Built with `mmdebstrap` (`rootfs/build.sh`), packages in
+`rootfs/packages.txt`, set up by `rootfs/setup.sh` in the armhf chroot.
+
 | Part | Choice | Why |
 | --- | --- | --- |
-| Distribution | Debian bookworm armhf | the base of KIAUH and MainsailOS; glibc 2.36 supports kernel 3.2+ |
-| Init | sysvinit | systemd needs devtmpfs, fhandle and cgroups the kernel lacks |
-| Devices | busybox `mdev` (also hotplug helper) | no devtmpfs, no udev |
-| Services | supervisord | Moonraker can manage it (`provider: supervisord_cli`) for updates |
-| Display | Xorg `fbdev` with `Rotate`, `evdev` touch, `fb-refresher` | no DRM, no udev; MDSS needs pans |
-| Network | wpa_supplicant + dhcpcd on `wlan0` (prima), RNDIS over USB | stock driver and firmware |
+| Distribution | Debian bookworm armhf, minimal | the base of KIAUH and MainsailOS; no desktop |
+| Init | systemd | Moonraker manages the services (`provider: systemd_cli`) |
+| Display | `cage -r` (Wayland kiosk, pixman renderer), `seatd`, Xwayland | X cannot rotate on `simpledrm`; the touch screen is rotated the same way by a libinput calibration matrix (`udev/rules.d/90-j1-touch.rules`) |
+| Network | NetworkManager, `wcn36xx` | KlipperScreen's network panel uses NetworkManager |
+| Time | systemd-timesyncd | the module has no battery backed clock |
 | Access | SSH (user `pi`) | |
 
-### Boot scripts (`/etc/init.d`)
+The root file system is about 2.3 GB and grows to the userdata partition (4.9 GiB)
+on the first boot.  Measured on the printer: about 0.8 s kernel and
+7 s user space to `multi-user.target`.
 
-* `j1-hardware` (rcS): mdev, `/firmware` and `/persist` read only,
-  backlight, framebuffer unblank, `fb-refresher`, X configuration with the
-  rotation of `/etc/klipper-os.conf` and the touch device found by name,
-  USB network.
-* `j1-firstboot` (rcS, once): grows the root file system to the
-  partition, creates the SSH host keys of the device.
-* `j1-network`: loads `pronto_wlan.ko`, starts wpa_supplicant and dhcpcd.
-* `supervisor`: Klipper, Moonraker, KlipperScreen (`xinit` as `pi`).
+### Services
+
+| Unit | Purpose |
+| --- | --- |
+| `klipper`, `moonraker` | as user `pi`, like a KIAUH installation |
+| `KlipperScreen` | switches to VT 7 (`j1-chvt`) and runs `cage -d -s -r -- j1-session` as `pi` |
+| `seatd` | DRM and input access for cage |
+| `wcnss-firmware` | loads the WLAN firmware once `/firmware` and `/persist` are mounted |
+| `j1-firstboot` | grows the root file system once |
+| `ssh` (drop-in) | creates the host keys of the device before the first start |
+
+Not started at boot: `NetworkManager-wait-online`, the apt, man-db and
+e2scrub timers.  The journal is limited in size.
+
+### Firmware of the module
+
+`/etc/fstab` mounts the modem partition (`/firmware`, vfat) and the
+persist partition (`/persist`, ext4) read only.  The kernel loads the
+WCNSS firmware from `/firmware/image`; the WLAN calibration
+(`WCNSS_qcom_wlan_nv.bin`) is linked from `/persist` by
+`tmpfiles.d/wcnss-firmware.conf`.  `qcom_wcnss_pil` is held back
+(`modprobe.d/wcnss-defer.conf`) until the mounts exist.
 
 ### Klipper stack
 
-Installed for the user `pi` as KIAUH would: `~/klipper` (at the version
-the firmware patch of KlipperSnapmakerJ1 was made for), `~/moonraker`,
-`~/KlipperScreen` with their virtual environments (wheels from
-piwheels.org), `~/printer_data`, and `~/KlipperSnapmakerJ1` installed by
-its `install.sh` (including the calibration pictures from the stock
+Installed for the user `pi` as KIAUH would: `~/klipper`, `~/moonraker`,
+`~/KlipperScreen` at the versions of `KlipperSnapmakerJ1/versions.conf`
+with their virtual environments (wheels from piwheels.org),
+`~/printer_data`, and `~/KlipperSnapmakerJ1` installed by its
+`install.sh` (including the calibration pictures from the stock
 application of the printer).  Moonraker's update manager updates all of
-them; system packages are not updated by Moonraker.
+them.
 
 ## What was not chosen
 
-* **Mainline kernel** (as postmarketOS for some MSM8909 devices): needs
-  panel and touch drivers for this board and a new bootloader setup; a
-  later option, the root file system would stay the same.
-* **Linux in a chroot next to Android**: the Android `user` build has no
-  root access, and Android would keep owning the display and the UART.
-* **Unlocking the bootloader**: not needed, the AOSP test key signs the
-  boot image.
+* **Stock Android kernel 3.10** (the first design of this project, its
+  boot image signed with the AOSP test key the locked bootloader trusts):
+  no source, the MDP3 framebuffer never showed the X output, the WLAN
+  driver could not start without Android's services, and no systemd.
+* **Armbian** (eazrael's image): works, but boots much longer and
+  carries far more than a printer host needs.
+* **X11** on `simpledrm`: the fbdev driver cannot set the mode and the
+  modesetting driver showed nothing when rotated.

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Wayland session of the J1 display: KlipperScreen in cage
+# (KlipperScreen.service)
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+export GDK_BACKEND=wayland
+exec /home/pi/.KlipperScreen-env/bin/python /home/pi/KlipperScreen/screen.py

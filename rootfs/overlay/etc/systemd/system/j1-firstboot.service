@@ -1,0 +1,12 @@
+[Unit]
+Description=First boot of KlipperSnapmakerJ1-os
+ConditionPathExists=!/var/lib/klipper-os/firstboot-done
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/j1-firstboot
+
+[Install]
+WantedBy=multi-user.target
