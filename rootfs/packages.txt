@@ -30,6 +30,13 @@ iputils-ping
 systemd-timesyncd
 iw
 openssh-server
+# Name in the network (<hostname>.local, set in KlipperScreen); the own
+# name resolves without an /etc/hosts entry, so renaming needs no file edit
+avahi-daemon
+libnss-myhostname
+# Web interface: Mainsail behind nginx on port 80
+nginx-light
+unzip
 # Klipper, Moonraker and KlipperScreen
 python3
 python3-venv

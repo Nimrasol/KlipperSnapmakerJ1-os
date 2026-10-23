@@ -36,7 +36,9 @@ Moonraker and KlipperScreen.
   this project builds them from his repositories at fixed commits.
 * The **userdata partition** holds a minimal Debian bookworm (armhf,
   systemd) with Klipper, Moonraker, KlipperScreen and KlipperSnapmakerJ1.
-  KlipperScreen runs in the Wayland kiosk `cage`, without a desktop.
+  KlipperScreen runs in the Wayland kiosk `cage`, without a desktop;
+  Mainsail is served on port 80 and the printer is found as
+  `snapmaker-j1.local` (the name can be changed in KlipperScreen).
   Linux is up about 8 s after the bootloader.
 * The main controller is on `/dev/ttyMSM1`; WLAN uses the open `wcn36xx`
   driver with the firmware of the module's own modem and persist

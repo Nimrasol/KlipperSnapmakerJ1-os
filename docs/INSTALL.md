@@ -100,7 +100,19 @@ its password.  The printer's address is shown there; then
 ssh pi@<address>          # password: klipper - change it with passwd
 ```
 
-and Mainsail or Fluidd can use Moonraker on port 7125 of the printer.
+The printer announces itself as **snapmaker-j1.local**.  With several
+printers, give each its own name in KlipperScreen under **More → Network
+Name** (letters, digits and `-`); the new name is used at once.
+
+* **Mainsail** runs on the printer: open **http://snapmaker-j1.local**
+  (or the printer's address).  The update manager keeps it up to date.
+* **Slicers** (OrcaSlicer, PrusaSlicer, SuperSlicer, Cura with the
+  OctoPrint plugin): add the printer as a Moonraker or OctoPrint host
+  with `snapmaker-j1.local` (port 80, or 7125 for Moonraker directly) to
+  upload and start prints.
+* **Fluidd** is not installed.  Its hosted page (app.fluidd.xyz) is only
+  served over https, and browsers do not let an https page connect to
+  the printer's unencrypted Moonraker.
 
 Without a display, a NetworkManager connection file can be added to the
 image before flashing (`/etc/NetworkManager/system-connections/`, mode
