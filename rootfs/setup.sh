@@ -104,6 +104,13 @@ rm /tmp/mainsail.zip
 rm -f /etc/nginx/sites-enabled/default
 ln -sf ../sites-available/mainsail /etc/nginx/sites-enabled/mainsail
 
+# <name>.local resolves to the IPv4 address only: Moonraker trusts the
+# local IPv4 networks, but not the public IPv6 address of a client, so
+# uploads from a slicer over IPv6 were refused (401)
+sed -i -e 's/^#\?use-ipv6=.*/use-ipv6=no/' \
+    -e 's/^#\?publish-aaaa-on-ipv4=.*/publish-aaaa-on-ipv4=no/' \
+    /etc/avahi/avahi-daemon.conf
+
 # Moonraker: services through systemctl (pi may use sudo), no system
 # package updates
 cat > $HOME_DIR/printer_data/config/moonraker.conf <<'EOF'

@@ -1,0 +1,3 @@
+# KlipperScreen (user pi, group video) switches the display backlight off
+# while its screen saver shows
+SUBSYSTEM=="backlight", ACTION=="add", RUN+="/bin/chgrp video /sys%p/bl_power /sys%p/brightness", RUN+="/bin/chmod g+w /sys%p/bl_power /sys%p/brightness"
