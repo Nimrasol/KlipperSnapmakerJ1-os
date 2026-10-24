@@ -1,0 +1,11 @@
+# The printer is switched off without shutdown, so fake-hwclock's save at
+# shutdown never runs; save the clock every few minutes instead
+[Unit]
+Description=Save the clock every 5 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

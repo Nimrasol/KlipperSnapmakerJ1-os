@@ -40,7 +40,7 @@ chmod 0755 /usr/local/sbin/j1-firstboot /usr/local/sbin/j1-chvt \
 # boot (short boot time, the printer is switched off without shutdown)
 systemctl enable klipper moonraker KlipperScreen seatd j1-firstboot \
     wcnss-firmware NetworkManager ssh systemd-timesyncd nginx \
-    avahi-daemon > /dev/null 2>&1
+    avahi-daemon fake-hwclock j1-clock-save.timer > /dev/null 2>&1
 systemctl set-default multi-user.target > /dev/null
 systemctl disable NetworkManager-wait-online.service > /dev/null 2>&1 || true
 for unit in apt-daily.timer apt-daily-upgrade.timer man-db.timer \

@@ -42,7 +42,7 @@ Built with `mmdebstrap` (`rootfs/build.sh`), packages in
 | Init | systemd | Moonraker manages the services (`provider: systemd_cli`) |
 | Display | `cage -r` (Wayland kiosk, pixman renderer), `seatd`, Xwayland | X cannot rotate on `simpledrm`; the touch screen is rotated the same way by a libinput calibration matrix (`udev/rules.d/90-j1-touch.rules`); the group `video` may switch the backlight (`udev/rules.d/90-j1-backlight.rules`), which KlipperSnapmakerJ1 turns off with the screen saver |
 | Network | NetworkManager, `wcn36xx` | KlipperScreen's network panel uses NetworkManager |
-| Time | systemd-timesyncd | the module has no battery backed clock |
+| Time | systemd-timesyncd, `fake-hwclock` (saved every 5 minutes by `j1-clock-save.timer`) | the module has no battery backed clock (the PMIC clock `rtc-pm8xxx` starts at 0 on every power up); without network the last saved time is restored at boot, so the time the printer was off is missing.  KlipperSnapmakerJ1 sets the time zone through systemd-timedated (`polkit-1/rules.d/50-klipperscreen-time.rules`) |
 | Access | SSH (user `pi`) | |
 | Web interface | Mainsail behind `nginx-light` (port 80, Moonraker proxied as in MainsailOS) | works without internet; Moonraker updates it |
 | Network name | `avahi-daemon` (`<hostname>.local`, IPv4 address only), `libnss-myhostname` | renamed in KlipperScreen (More → Network Name) through NetworkManager and avahi, without root rights; IPv4 only because Moonraker trusts the local IPv4 networks but not a client's public IPv6 address (slicer uploads were refused) |
