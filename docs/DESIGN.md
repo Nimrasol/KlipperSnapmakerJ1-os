@@ -40,12 +40,12 @@ Built with `mmdebstrap` (`rootfs/build.sh`), packages in
 | --- | --- | --- |
 | Distribution | Debian bookworm armhf, minimal | the base of KIAUH and MainsailOS; no desktop |
 | Init | systemd | Moonraker manages the services (`provider: systemd_cli`) |
-| Display | `cage -r` (Wayland kiosk, pixman renderer), `seatd`, Xwayland | X cannot rotate on `simpledrm`; the touch screen is rotated the same way by a libinput calibration matrix (`udev/rules.d/90-j1-touch.rules`) |
+| Display | `cage -r` (Wayland kiosk, pixman renderer), `seatd`, Xwayland | X cannot rotate on `simpledrm`; the touch screen is rotated the same way by a libinput calibration matrix (`udev/rules.d/90-j1-touch.rules`); the group `video` may switch the backlight (`udev/rules.d/90-j1-backlight.rules`), which KlipperSnapmakerJ1 turns off with the screen saver |
 | Network | NetworkManager, `wcn36xx` | KlipperScreen's network panel uses NetworkManager |
 | Time | systemd-timesyncd | the module has no battery backed clock |
 | Access | SSH (user `pi`) | |
 | Web interface | Mainsail behind `nginx-light` (port 80, Moonraker proxied as in MainsailOS) | works without internet; Moonraker updates it |
-| Network name | `avahi-daemon` (`<hostname>.local`), `libnss-myhostname` | renamed in KlipperScreen (More → Network Name) through NetworkManager and avahi, without root rights |
+| Network name | `avahi-daemon` (`<hostname>.local`, IPv4 address only), `libnss-myhostname` | renamed in KlipperScreen (More → Network Name) through NetworkManager and avahi, without root rights; IPv4 only because Moonraker trusts the local IPv4 networks but not a client's public IPv6 address (slicer uploads were refused) |
 
 The root file system is about 2.3 GB and grows to the userdata partition (4.9 GiB)
 on the first boot.  Measured on the printer: about 0.8 s kernel and
