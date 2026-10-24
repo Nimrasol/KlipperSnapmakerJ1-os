@@ -1,0 +1,6 @@
+[Unit]
+Description=Save the clock (the display module has no battery backed clock)
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/fake-hwclock save

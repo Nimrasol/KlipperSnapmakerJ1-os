@@ -26,8 +26,10 @@ wpasupplicant
 wireless-regdb
 iproute2
 iputils-ping
-# The display module has no battery backed clock: time from the network
+# The display module has no battery backed clock: time from the network,
+# and the last time restored at boot (fake-hwclock, saved every 5 minutes)
 systemd-timesyncd
+fake-hwclock
 iw
 openssh-server
 # Name in the network (<hostname>.local, set in KlipperScreen); the own

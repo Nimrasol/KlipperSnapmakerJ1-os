@@ -1,0 +1,8 @@
+// KlipperScreen (user pi, group netdev) sets the time zone, network time
+// and date of the printer through systemd-timedated
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.timedate1.") == 0 &&
+        subject.isInGroup("netdev")) {
+        return polkit.Result.YES;
+    }
+});
