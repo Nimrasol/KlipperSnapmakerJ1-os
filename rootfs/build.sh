@@ -5,11 +5,10 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
-# Usage: rootfs/build.sh BOOT_DIR J1_REPO OUT_DIR [APK]
+# Usage: rootfs/build.sh BOOT_DIR J1_REPO OUT_DIR
 #   BOOT_DIR   output of boot/build.sh (kernel modules and release)
 #   J1_REPO    checkout of KlipperSnapmakerJ1 to install
 #   OUT_DIR    receives rootfs.tar
-#   APK        stock display application (calibration pictures), optional
 #
 # Runs in a privileged Debian container; the armhf programs of the new
 # system run through the qemu binfmt handler of the build host.
@@ -18,7 +17,6 @@ set -e
 BOOT="$(realpath "$1")"
 J1="$(realpath "$2")"
 OUT="$(realpath -m "$3")"
-APK="${4:+$(realpath "$4")}"
 SRC="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUT"
 
@@ -26,12 +24,10 @@ if [ ! -e /proc/sys/fs/binfmt_misc/qemu-arm ]; then
     echo "The build host needs a qemu-arm binfmt handler (qemu-user-static)"
     exit 1
 fi
-APK_MOUNT=
-[ -n "$APK" ] && APK_MOUNT="-v $APK:/apk/base.apk:ro"
 
 docker run --rm --privileged \
     -v "$SRC:/src:ro" -v "$BOOT:/boot-out:ro" -v "$J1:/j1:ro" \
-    -v "$OUT:/out" $APK_MOUNT \
+    -v "$OUT:/out" \
     debian:bookworm bash -e -c '
 apt-get -qq update
 apt-get -qq install -y --no-install-recommends mmdebstrap arch-test \
@@ -56,7 +52,6 @@ cp /boot-out/versions $root/tmp/boot-versions
 # modified checkout)
 git config --global --add safe.directory "*"
 git clone -q /j1 $root/opt/KlipperSnapmakerJ1
-[ -e /apk/base.apk ] && cp /apk/base.apk $root/tmp/base.apk
 cp /src/setup.sh $root/tmp/setup.sh
 mount -t proc proc $root/proc
 mount -t sysfs sysfs $root/sys

@@ -1,28 +1,36 @@
 # KlipperSnapmakerJ1-os
 
-Linux for the display module of the Snapmaker J1 (Quectel SC20-W), so that
-the display runs Klipper, Moonraker and KlipperScreen like a Raspberry Pi
-does on other printers.
+**The operating system of the display module for
+[Klipper on the Snapmaker J1](https://github.com/Nimrasol/KlipperSnapmakerJ1).**
 
-> **Status: experimental.**  The image boots on a J1 (board revision 2):
-> KlipperScreen with the J1 theme on the display, WLAN, SSH, Klipper
-> connected to the main controller.  The full calibration on the printer
-> is not tested yet.
+The touch screen of the J1 is a small computer of its own (Quectel SC20-W
+module).  This repository turns it into the Klipper host of the printer:
+it builds the Linux system that runs Klipper, Moonraker, KlipperScreen and
+Mainsail on the display, the way a Raspberry Pi does on other printers.
+That is why the J1 needs no extra computer or screen for Klipper.
 
-This project is not affiliated with or endorsed by Snapmaker.
+> **Looking for the firmware for your J1?**  Start at
+> [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1):
+> the features, the user manual, the download and the installation are
+> there.  This repository is for building the display system yourself.
 
-## Related repositories
+## The project at a glance
 
-| Repository | Content |
+| Repository | Role in the project |
 | --- | --- |
-| [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1) | Klipper modules, printer configuration, KlipperScreen add-on and theme, main controller firmware patch |
-| **KlipperSnapmakerJ1-os** (this one) | Linux image for the J1 display module, the Klipper host |
-| [Nimrasol/klipper](https://github.com/Nimrasol/klipper/tree/j1), branch `j1` | Klipper fork with the firmware changes (GD32F305, J1 factory bootloader) as commits on Klipper; the same changes as `firmware/klipper-gd32f305-snapmaker.patch`. The printer runs unmodified Klipper |
+| [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1) | **Start here.** Everything printer specific: Klipper modules and configuration, the KlipperScreen calibration menu and theme, the main controller firmware, the user manual, downloads and installation |
+| **KlipperSnapmakerJ1-os** (this one) | The Linux system of the display module: boot loader, kernel, Debian with Klipper, Moonraker, KlipperScreen and Mainsail. Installed once |
+| [Nimrasol/klipper](https://github.com/Nimrasol/klipper/tree/j1), branch `j1` | Klipper with the main controller support (GD32F305 chip, J1 factory bootloader) as commits, for reference and review. The printer itself runs unmodified Klipper |
 
-The image is installed once.  Afterwards everything printer specific comes
-from [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1)
-and is updated through the Moonraker update manager, like Klipper,
-Moonraker and KlipperScreen.
+The system is installed once.  Afterwards everything printer specific
+comes from KlipperSnapmakerJ1 and is updated through the Moonraker update
+manager, like Klipper, Moonraker, KlipperScreen and Mainsail.
+
+> **Status:** runs on the J1 (board revision 2): KlipperScreen with the J1
+> theme on the display, WLAN, SSH, Mainsail, Klipper connected to the main
+> controller, printing and the calibration menu.  The installation from a
+> USB stick is in preparation; today the image is installed in the EDL
+> mode of the module ([installation](docs/INSTALL.md)).
 
 ## How it works
 
@@ -56,9 +64,8 @@ Details: [analysis of the module](docs/ANALYSIS.md),
 ```
 
 Needs Docker and `qemu-user-static` on Linux or WSL2, and a full eMMC dump
-of your own display module: the calibration pictures and test prints of
-the Snapmaker application are taken from it and are not part of this
-repository.
+of your own display module: the WLAN driver and configuration of its
+system partition are taken from it and are not part of this repository.
 
 | Path | Content |
 | --- | --- |

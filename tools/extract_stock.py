@@ -17,7 +17,6 @@
 #   modem.img              NON-HLOS firmware (vfat, mounted as /firmware)
 #   persist.img            calibration data (ext4, mounted as /persist)
 #   system/...             WLAN driver and configuration from /system
-#   base.apk               Snapmaker application (calibration pictures)
 import argparse, json, os, struct, subprocess, sys
 
 # The firmware directory links WCNSS_qcom_cfg.ini to /data and the NV
@@ -76,25 +75,6 @@ def extract_system(dump, part, outdir):
                      % (name, result.stderr.decode(errors="replace")))
 
 
-def extract_apk(dump, part, outdir):
-    # The installed Snapmaker application (calibration pictures and test
-    # prints) on the userdata partition, which the installation replaces
-    source = "%s?offset=%d" % (dump, part["offset"])
-    listing = subprocess.run(["debugfs", "-R", "ls -p /app", source],
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.DEVNULL).stdout.decode()
-    apps = sorted(line.split("/")[5] for line in listing.splitlines()
-                  if "/com.snapmaker.j1" in line)
-    if not apps:
-        print("no Snapmaker application on userdata; the calibration"
-              " pictures are missing in the image")
-        return
-    dest = os.path.join(outdir, "base.apk")
-    subprocess.run(["debugfs", "-R", "dump /app/%s/base.apk %s"
-                    % (apps[-1], dest), source],
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dump", help="full eMMC dump (sc20w-emmc-full.bin)")
@@ -107,7 +87,6 @@ def main():
             copy_partition(f, parts[name],
                            os.path.join(args.outdir, name + ".img"))
     extract_system(os.path.abspath(args.dump), parts["system"], args.outdir)
-    extract_apk(os.path.abspath(args.dump), parts["userdata"], args.outdir)
     with open(os.path.join(args.outdir, "partitions.json"), "w") as f:
         json.dump(parts, f, indent=1)
     print("extracted %s, system files and partitions.json to %s"

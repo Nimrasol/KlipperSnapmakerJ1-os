@@ -91,8 +91,8 @@ network for access could not work.
 ## Stock parts used
 
 Taken from the dump of the user's printer by `tools/extract_stock.py`, not
-distributed with this project: the Snapmaker application
-(`/data/app/com.snapmaker.j1-*/base.apk`), for the pictures and test
-prints of the calibration menu of KlipperSnapmakerJ1.  The WLAN firmware
+distributed with this project: the stock kernel partition and the WLAN
+driver and configuration of the system partition.  The WLAN firmware
 and calibration are read on the printer from its own modem and persist
-partitions.
+partitions.  The pictures and test prints of the calibration menu are
+part of KlipperSnapmakerJ1.
