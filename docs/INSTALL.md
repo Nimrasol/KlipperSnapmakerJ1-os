@@ -10,8 +10,8 @@
   [bkerler/edl](https://github.com/bkerler/edl) and pyserial.
 * A full eMMC backup of your display module (`sc20w-emmc-full.bin`), read
   in Qualcomm EDL mode (below) with `edl rf sc20w-emmc-full.bin`.  The
-  build takes the calibration pictures of the Snapmaker application from
-  it.
+  build takes the WLAN driver and configuration from it, and it is the
+  way back to the stock system.
 * For building: a Linux PC (or WSL2) with Docker and `qemu-user-static`
   (binfmt handler for ARM), and
   [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1)

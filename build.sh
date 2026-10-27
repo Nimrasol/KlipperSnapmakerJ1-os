@@ -26,7 +26,7 @@ if [ ! -f "$DUMP" ] || [ ! -f "$J1/install.sh" ]; then
 fi
 mkdir -p "$OUT"
 
-echo "== Stock display application from the dump (calibration pictures)"
+echo "== Stock parts from the dump (kernel, WLAN firmware)"
 docker run --rm -v "$(dirname "$DUMP"):/dump:ro" -v "$REPO:/repo:ro" \
     -v "$OUT:/out" debian:bookworm bash -e -c "
 apt-get -qq update
@@ -38,7 +38,7 @@ echo "== lk2nd and kernel"
 "$REPO/boot/build.sh" "$OUT/boot"
 
 echo "== Root file system"
-"$REPO/rootfs/build.sh" "$OUT/boot" "$J1" "$OUT" "$OUT/stock/base.apk"
+"$REPO/rootfs/build.sh" "$OUT/boot" "$J1" "$OUT"
 
 echo "== Partition images"
 docker run --rm -v "$REPO:/repo:ro" -v "$OUT:/out" debian:bookworm \

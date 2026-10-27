@@ -165,12 +165,8 @@ printf 'klipper\nmoonraker\nKlipperScreen\n' \
 chown -R pi:pi $HOME_DIR/printer_data
 
 # KlipperSnapmakerJ1: modules, configuration, KlipperScreen add-on, theme
-# and menu, calibration pictures and test prints from the stock display
-# application of this printer
-apk=
-[ -e /tmp/base.apk ] && apk="--apk /tmp/base.apk"
-su pi -c "$J1/install.sh $apk"
-rm -f /tmp/base.apk
+# and menu, calibration pictures and test prints
+su pi -c "$J1/install.sh"
 
 # Versions in the image
 {

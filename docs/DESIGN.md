@@ -81,8 +81,7 @@ Installed for the user `pi` as KIAUH would: `~/klipper`, `~/moonraker`,
 `~/KlipperScreen` at the versions of `KlipperSnapmakerJ1/versions.conf`
 with their virtual environments (wheels from piwheels.org),
 `~/printer_data`, and `~/KlipperSnapmakerJ1` installed by its
-`install.sh` (including the calibration pictures from the stock
-application of the printer).  Moonraker's update manager updates all of
+`install.sh` (including the calibration pictures and test prints).  Moonraker's update manager updates all of
 them.
 
 ## What was not chosen
