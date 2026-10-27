@@ -34,7 +34,8 @@ chmod 0440 /etc/sudoers.d/010_pi
 rm -f /etc/ssh/ssh_host_*
 : > /etc/machine-id
 chmod 0755 /usr/local/sbin/j1-firstboot /usr/local/sbin/j1-chvt \
-    /usr/local/bin/j1-session
+    /usr/local/bin/j1-session \
+    /etc/NetworkManager/dispatcher.d/90-moonraker-refresh
 
 # Services; nothing that waits for the network or runs maintenance jobs at
 # boot (short boot time, the printer is switched off without shutdown)

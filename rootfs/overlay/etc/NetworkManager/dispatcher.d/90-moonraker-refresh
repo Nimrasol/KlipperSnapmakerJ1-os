@@ -1,0 +1,31 @@
+#!/bin/sh
+# Refresh the Moonraker update manager once the network is up
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+# Moonraker checks the repositories when it starts and then only every
+# refresh_interval (a week).  The printer usually starts before the WLAN
+# is connected, the first time even without any WLAN, so the update
+# manager would show no versions and no updates until then.  Moonraker
+# refuses the refresh while a print is running.
+case "$2" in
+    up|connectivity-change) ;;
+    *) exit 0 ;;
+esac
+[ "$2" = connectivity-change ] && [ "$CONNECTIVITY_STATE" != FULL ] && exit 0
+# Once for both events of a connection
+STAMP=/run/j1-update-refresh
+[ -n "$(find $STAMP -mmin -5 2>/dev/null)" ] && exit 0
+touch $STAMP
+# In the background: the dispatcher waits for its scripts, and Moonraker
+# may still be starting
+(
+    for i in 1 2 3 4 5 6; do
+        sleep 10
+        curl -sf -m 300 -X POST http://127.0.0.1:7125/machine/update/refresh \
+            > /dev/null && break
+    done
+) > /dev/null 2>&1 &
+exit 0
