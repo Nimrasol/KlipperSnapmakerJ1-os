@@ -3,6 +3,62 @@
 > **Experimental.**  Tested on one J1 (board revision 2).  Keep the full
 > backup of your display module: it is the way back to the stock system.
 
+There are two ways to install:
+
+* **From a USB stick** on the stock touch screen, without EDL: the way
+  for users, see [USB stick](#usb-stick) below and the
+  [installation of KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1#installation).
+* **In EDL mode** with a Linux computer: for development and as the
+  fallback when a printer no longer starts (sections 1 to 5).
+
+## USB stick
+
+### Stock firmware → Klipper
+
+`install/build.sh` builds the stick from the images of `build.sh` and an
+official Snapmaker update package: `J1_V*.bin` and the folder `install/`
+(`lk2nd.img`, `linux-boot.img`, `rootfs.img.gz`, `manifest`).
+
+1. The stock application installs the update package: the stock main
+   controller firmware (unchanged) and, as its application update, a
+   small trigger app.  Its screen **Klipper installation** installs the
+   installer app (`install/installer-app`, signed with the platform key,
+   system user).
+2. The installer app hands a signed OTA package to the stock recovery
+   (`RecoverySystem.installPackage`).  Its `update-binary` checks the
+   images on the stick against the sha256 compiled into it, writes lk2nd
+   to `boot` and `linux-boot.img` to `cache`, clears the boot command in
+   `misc` and restarts.  The recovery shows nothing on the J1: the
+   screen stays dark for up to a minute.
+3. lk2nd starts the maintenance system (`maint/`, extlinux label
+   `maint`), which checks `rootfs.img.gz` and writes it to `userdata`,
+   then starts Linux.
+4. The first start installs the Klipper firmware on the main controller
+   (`j1-mcu-firmware.service`, `snapmaker_j1_flash.py`, at most three
+   tries, log in `/var/log/j1-mcu-firmware.log`), then Klipper starts.
+
+Until the restart in step 2 nothing of the Snapmaker system is changed;
+the screen **Klipper installation** offers **Back to Snapmaker**.
+
+### Klipper → stock firmware
+
+`stock/build.sh` builds the stock firmware package from a full eMMC
+dump of a display module with the Snapmaker system and the official
+update package: `J1_V*.bin` and `stock-restore/` (`boot.img`,
+`userdata.img.gz`, `userdata-footer.bin`, `cache.img.gz`, `manifest`).
+`stock/clean.sh` removes the personal and device data of the dump (WLAN
+networks, print files, Android ID, logs) and resets the setup flags of
+the Snapmaker app, so its setup starts as on a new printer.
+
+1. KlipperScreen, **More → System → Stock Firmware** (end of the page),
+   runs `scripts/snapmaker_j1_stock.py` of KlipperSnapmakerJ1: it checks
+   the package and `stock-restore/`, installs the stock main controller
+   firmware from the package through the factory bootloader and restarts
+   into the maintenance system.
+2. The maintenance system checks the files against the manifest and
+   writes `userdata`, its encryption footer, `cache` and `boot`.
+3. The printer starts the Snapmaker system.
+
 ## What you need
 
 * A Linux computer with USB for EDL and for the main controller, for
@@ -93,8 +149,8 @@ the device.
 
 ## 5. WLAN and access
 
-Choose the network in KlipperScreen under **More → Network** and enter
-its password.  The printer's address is shown there; then
+Choose the network in KlipperScreen under **More → Network → WLAN** and
+enter its password.  The printer's address is shown there; then
 
 ```
 ssh pi@<address>          # password: klipper - change it with passwd
@@ -102,7 +158,7 @@ ssh pi@<address>          # password: klipper - change it with passwd
 
 The printer announces itself as **snapmaker-j1.local**.  With several
 printers, give each its own name in KlipperScreen under **More → Network
-Name** (letters, digits and `-`); the new name is used at once.
+→ Network Name** (letters, digits and `-`); the new name is used at once.
 
 * **Mainsail** runs on the printer: open **http://snapmaker-j1.local**
   (or the printer's address).  The update manager keeps it up to date.
