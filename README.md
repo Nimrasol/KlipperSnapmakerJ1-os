@@ -19,6 +19,17 @@ That is why the J1 needs no extra computer or screen for Klipper.
 
 [![Download: Klipper installation](https://img.shields.io/badge/Download-Klipper_installation-ff8a00?style=for-the-badge&logo=github)](https://github.com/Nimrasol/KlipperSnapmakerJ1-os/releases/latest/download/KlipperSnapmakerJ1-install.zip)
 
+**Video:** [Install Klipper on a Snapmaker J1 / J1s](https://www.youtube.com/watch?v=U0IwCsgZC0M)
+
+[![Video: Install Klipper on a Snapmaker J1 / J1s](https://img.youtube.com/vi/U0IwCsgZC0M/hqdefault.jpg)](https://www.youtube.com/watch?v=U0IwCsgZC0M)
+
+> [!CAUTION]
+> **This takes a while: about 7 minutes.  Do not pull the USB
+> stick and do not switch the printer off until the Klipper main menu
+> appears.**  The printer restarts by itself on the way and the screen
+> stays dark for a while; that is normal.  A stick pulled in the middle can
+> leave the printer unable to start.
+
 1. Unpack `KlipperSnapmakerJ1-install.zip` and copy its contents
    (`J1_V*.bin` and the folder `install`) to a USB stick (FAT32, 2 GB or
    more).
@@ -38,7 +49,8 @@ That is why the J1 needs no extra computer or screen for Klipper.
 
 If the screen **Klipper installation** reports a failure, tap **Back to
 Snapmaker**: nothing has been changed yet.  The way back to the
-Snapmaker firmware: [installation](docs/INSTALL.md#klipper--snapmaker-firmware).
+Snapmaker firmware: [installation](docs/INSTALL.md#klipper--snapmaker-firmware)
+(video: [Restore Snapmaker J1 Stock Firmware from Klipper](https://www.youtube.com/watch?v=L98PkPFao04)).
 
 > [!WARNING]
 > **Calibrate the printer right after the installation, before the first
