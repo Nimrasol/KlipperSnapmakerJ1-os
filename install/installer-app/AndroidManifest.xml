@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Installer for the way from the Snapmaker system to Klipper.
+
+  Copyright (C) 2026  Nimrasol
+  This file may be distributed under the terms of the GNU GPLv3 license.
+
+  Installed and started by the trigger app (com.snapmaker.j1).  A new
+  package may join the system shared user id, which the already registered
+  stock app cannot: as the system user it can place the signed OTA package
+  in /cache/recovery and hand it to the standard Android RecoverySystem,
+  which reboots into the recovery to install KlipperSnapmakerJ1-os.  It is
+  signed with the public AOSP platform key, like the system of this device.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.nimrasol.j1installer"
+    android:sharedUserId="android.uid.system"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-permission android:name="android.permission.REBOOT"/>
+    <uses-permission android:name="android.permission.RECOVERY"/>
+
+    <application android:label="Klipper Installer" android:hasCode="true">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:launchMode="singleTask"/>
+    </application>
+</manifest>

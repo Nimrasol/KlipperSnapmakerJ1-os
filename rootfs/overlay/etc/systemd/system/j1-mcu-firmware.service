@@ -1,0 +1,14 @@
+[Unit]
+Description=Install the Klipper firmware on the main controller (first boot)
+ConditionPathExists=!/var/lib/klipper-os/mcu-firmware-done
+After=local-fs.target
+Before=klipper.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=900
+ExecStart=/usr/local/sbin/j1-mcu-firmware
+
+[Install]
+WantedBy=multi-user.target

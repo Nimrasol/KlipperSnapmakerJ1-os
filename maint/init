@@ -1,0 +1,217 @@
+#!/bin/sh
+# Maintenance system of KlipperSnapmakerJ1-os (initramfs, busybox)
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+# lk2nd starts it with the "maint" label of extlinux.conf.  It works on
+# the partitions while neither Android nor the Linux system runs, with the
+# files of a USB stick.  The request comes from maint/request on the cache
+# partition (written by the Linux system, or preset in the install image):
+#   restore   write the Snapmaker system (stock-restore/ on the stick:
+#             userdata, cache and boot partition, see stock/build.sh), so
+#             the display starts the Snapmaker system again
+#   install   write the Klipper root file system (install/rootfs.img.gz on
+#             the stick) to userdata, then start Klipper.  Used on the way
+#             from the Snapmaker system to Klipper: the OTA (see install/)
+#             has just written lk2nd and this cache partition, and preset
+#             this request; maint finishes by writing the large rootfs.
+# Without a request it starts the Linux system again.
+export PATH=/bin:/sbin
+SYSTEM=stock-restore
+STICK=/mnt/stick
+CACHE_MNT=/mnt/cache
+FOOTER=16384
+
+mkdir -p /proc /sys /dev /mnt/stick /mnt/cache /tmp
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+exec > /dev/tty1 2>&1 < /dev/tty1
+printf '\033[2J\033[H\033[?25l'
+
+# Messages on the display and in /tmp/maint.log, which is kept as
+# maint/log on the cache partition (read it from the Linux system)
+LOG=/tmp/maint.log
+say() {
+    printf '  %s\n' "$*"
+    printf '%s %s\n' "$(cut -d' ' -f1 /proc/uptime)" "$*" >> $LOG
+}
+keep_log() {
+    {
+        echo "== /proc/partitions"; cat /proc/partitions
+        echo "== dmesg"; dmesg | tail -n 80
+    } >> $LOG 2>&1
+    [ -d $CACHE_MNT/maint ] && cp $LOG $CACHE_MNT/maint/log
+}
+fail() {
+    say ""
+    say "ERROR: $*"
+    say ""
+    say "Nothing is lost: switch the printer off and on to try again."
+    keep_log
+    sync
+    while :; do sleep 3600; done
+}
+# Before anything is written: back to the Linux system
+abort() {
+    say ""
+    say "ERROR: $*"
+    say "Nothing was changed.  The printer starts Klipper again."
+    keep_log
+    set_default j1
+    umount $STICK 2>/dev/null
+    umount $CACHE_MNT
+    sync
+    sleep 20
+    reboot -f
+}
+# Partition device by its GPT name
+part() {
+    for u in /sys/class/block/*/uevent; do
+        if grep -qx "PARTNAME=$1" "$u"; then
+            echo "/dev/$(sed -n 's/^DEVNAME=//p' "$u")"
+            return 0
+        fi
+    done
+    return 1
+}
+set_default() {
+    sed -i "s/^default .*/default $1/" $CACHE_MNT/extlinux/extlinux.conf
+}
+
+for m in /lib/modules/*.ko; do insmod "$m" >> $LOG 2>&1; done
+
+say ""
+say "Snapmaker J1 maintenance"
+say ""
+# The eMMC appears a moment after the start (the Linux system waits for
+# its root with rootwait)
+i=0
+until CACHE=$(part cache); do
+    i=$((i + 1))
+    if [ $i -gt 60 ]; then
+        say "ERROR: cache partition not found, starting again"
+        sleep 10
+        reboot -f
+    fi
+    sleep 1
+done
+mount -t ext2 "$CACHE" $CACHE_MNT || fail "cannot mount the cache partition"
+# Mount the first USB stick that carries the marker file $1; sets $found
+mount_stick() {
+    found=""
+    i=0
+    while [ $i -lt 120 ] && [ -z "$found" ]; do
+        for dev in /dev/sd[a-z][0-9] /dev/sd[a-z]; do
+            [ -b "$dev" ] || continue
+            if mount -t vfat -o ro "$dev" $STICK 2>/dev/null; then
+                if [ -f "$STICK/$1" ]; then
+                    found=$dev
+                    break
+                fi
+                umount $STICK
+            fi
+        done
+        [ -n "$found" ] || { sleep 1; i=$((i + 1)); }
+    done
+    [ -n "$found" ] && say "USB stick $found"
+}
+
+do_restore() {
+    say "Restoring the Snapmaker stock system from the USB stick."
+    say "Do not switch the printer off."
+    say ""
+    say "Waiting for the USB stick..."
+    mount_stick "$SYSTEM/manifest"
+    [ -n "$found" ] || abort "no USB stick with $SYSTEM/ found"
+    ls -la $STICK $STICK/$SYSTEM >> $LOG 2>&1
+
+    cd $STICK/$SYSTEM || abort "cannot open $SYSTEM/"
+    say "Checking the files (about a minute)..."
+    sha256sum -c manifest >> $LOG 2>&1 \
+        || { tail -n 5 $LOG; abort "the files on the stick are damaged"; }
+
+    USERDATA=$(part userdata) || abort "userdata partition not found"
+    BOOT=$(part boot) || abort "boot partition not found"
+
+    say "1/3  Android data (a few minutes)..."
+    gunzip -c userdata.img.gz | dd of="$USERDATA" bs=1M conv=fsync 2>/dev/null \
+        || fail "writing the Android data failed"
+    size=$(cat /sys/class/block/${USERDATA#/dev/}/size)
+    dd if=userdata-footer.bin of="$USERDATA" bs=512 \
+        seek=$((size - FOOTER / 512)) conv=fsync 2>/dev/null \
+        || fail "writing the Android data failed"
+
+    say "2/3  Android boot image..."
+    dd if=boot.img of="$BOOT" bs=1M conv=fsync 2>/dev/null \
+        || fail "writing the boot image failed"
+    cmp -n "$(wc -c < boot.img)" boot.img "$BOOT" \
+        || fail "the boot image does not verify"
+
+    # Last: the cache partition holds this maintenance system.  Android
+    # starts without it, so an interruption here does no harm
+    say "3/3  Android cache..."
+    umount $CACHE_MNT
+    gunzip -c cache.img.gz | dd of="$CACHE" bs=1M conv=fsync 2>/dev/null \
+        || say "(writing the cache failed; Android starts anyway)"
+
+    cd /
+    umount $STICK
+    sync
+    say ""
+    say "Done.  The printer starts the Snapmaker system."
+    sleep 5
+    reboot -f
+}
+
+do_install() {
+    say "Installing Klipper from the USB stick."
+    say "Do not switch the printer off."
+    say ""
+    say "Waiting for the USB stick..."
+    mount_stick "install/manifest"
+    [ -n "$found" ] || abort "no USB stick with install/ found"
+    ls -la $STICK/install >> $LOG 2>&1
+
+    cd $STICK/install || abort "cannot open install/"
+    say "Checking the files (about a minute)..."
+    sha256sum -c manifest >> $LOG 2>&1 \
+        || { tail -n 5 $LOG; abort "the files on the stick are damaged"; }
+
+    USERDATA=$(part userdata) || abort "userdata partition not found"
+
+    say "Writing the Klipper system (a few minutes)..."
+    gunzip -c rootfs.img.gz | dd of="$USERDATA" bs=1M conv=fsync 2>/dev/null \
+        || fail "writing the Klipper system failed"
+
+    # lk2nd and this cache (Linux boot) were already written by the OTA.
+    # Switch the default away from maint and drop the request, so the next
+    # start boots Klipper.
+    set_default j1
+    rm -f $CACHE_MNT/maint/request
+    cd /
+    umount $STICK
+    umount $CACHE_MNT
+    sync
+    say ""
+    say "Done.  The printer starts Klipper."
+    sleep 5
+    reboot -f
+}
+
+REQUEST=$(cat $CACHE_MNT/maint/request 2>/dev/null)
+case "$REQUEST" in
+    restore) do_restore ;;
+    install) do_install ;;
+    *)
+        say "No request, starting Klipper."
+        keep_log
+        set_default j1
+        umount $CACHE_MNT
+        sync
+        sleep 2
+        reboot -f
+        ;;
+esac

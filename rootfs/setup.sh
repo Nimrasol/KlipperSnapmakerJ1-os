@@ -34,12 +34,14 @@ chmod 0440 /etc/sudoers.d/010_pi
 rm -f /etc/ssh/ssh_host_*
 : > /etc/machine-id
 chmod 0755 /usr/local/sbin/j1-firstboot /usr/local/sbin/j1-chvt \
+    /usr/local/sbin/j1-mcu-firmware \
     /usr/local/bin/j1-session \
     /etc/NetworkManager/dispatcher.d/90-moonraker-refresh
 
 # Services; nothing that waits for the network or runs maintenance jobs at
 # boot (short boot time, the printer is switched off without shutdown)
 systemctl enable klipper moonraker KlipperScreen seatd j1-firstboot \
+    j1-mcu-firmware \
     wcnss-firmware NetworkManager ssh systemd-timesyncd nginx \
     avahi-daemon fake-hwclock j1-clock-save.timer > /dev/null 2>&1
 systemctl set-default multi-user.target > /dev/null
@@ -168,6 +170,10 @@ chown -R pi:pi $HOME_DIR/printer_data
 # KlipperSnapmakerJ1: modules, configuration, KlipperScreen add-on, theme
 # and menu, calibration pictures and test prints
 su pi -c "$J1/install.sh"
+
+# Main controller firmware for the installed Klipper; j1-mcu-firmware
+# installs it on the first start
+su pi -c "$J1/firmware/build.sh" > /dev/null
 
 # Versions in the image
 {

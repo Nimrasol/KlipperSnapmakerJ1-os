@@ -37,6 +37,9 @@ python3 /repo/tools/extract_stock.py '/dump/$(basename "$DUMP")' /out/stock
 echo "== lk2nd and kernel"
 "$REPO/boot/build.sh" "$OUT/boot"
 
+echo "== Maintenance system"
+"$REPO/maint/build.sh" "$OUT/boot" "$OUT/boot/maint.cpio.gz"
+
 echo "== Root file system"
 "$REPO/rootfs/build.sh" "$OUT/boot" "$J1" "$OUT"
 
@@ -49,7 +52,7 @@ cd /out
 cp boot/lk2nd.img lk2nd.img
 # Boot file system for the cache partition (lk2nd reads ext2)
 mkdir -p /build/bootfs/extlinux
-cp boot/zImage boot/snapmakerj1.dtb /build/bootfs/
+cp boot/zImage boot/snapmakerj1.dtb boot/maint.cpio.gz /build/bootfs/
 cp /repo/boot/extlinux.conf /build/bootfs/extlinux/
 rm -f linux-boot.img
 mke2fs -q -t ext2 -L linux_boot -d /build/bootfs linux-boot.img 64M
