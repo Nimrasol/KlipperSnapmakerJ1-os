@@ -7,6 +7,10 @@ Copy the contents of this archive to a USB stick (FAT32):
   stock-restore/   the Snapmaker system of the display module
                    (Android, app V2.8.0) with checksums
 
+!!! THIS TAKES A WHILE: ABOUT 3 MINUTES. DO NOT PULL THE USB STICK
+!!! AND DO NOT SWITCH THE PRINTER OFF UNTIL THE SNAPMAKER SETUP APPEARS.
+The printer restarts by itself on the way; that is normal.
+
 1. Plug the stick into the USB port on the front of the printer.
 2. On the touch screen: More -> System, scroll to the end and tap
    Stock Firmware.

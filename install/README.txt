@@ -8,6 +8,11 @@ Copy the whole contents of this archive to a USB stick (FAT32):
   J1_V*.bin             an update package for the Snapmaker system
   install/              the Klipper system and its installer
 
+!!! THIS TAKES A WHILE: ABOUT 7 MINUTES. DO NOT PULL THE USB STICK
+!!! AND DO NOT SWITCH THE PRINTER OFF UNTIL THE KLIPPER MAIN MENU APPEARS.
+The printer restarts by itself on the way and the screen stays dark for a
+while; that is normal.
+
 1. Plug the stick into the USB port on the front of the printer.
 2. On the Snapmaker touch screen, start a firmware update from the USB
    stick (Settings -> About / Firmware update) and confirm.
