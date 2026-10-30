@@ -62,20 +62,32 @@ Details: [analysis of the module](docs/ANALYSIS.md),
 
 ## Building
 
+GitHub Actions builds the installation package for the USB stick
+(**Actions → Build → Run workflow**, or a tag `vX.Y.Z`, which attaches it
+to the release); see `.github/workflows/build.yml`.  By hand:
+
 ```
-./build.sh /path/to/sc20w-emmc-full.bin [../KlipperSnapmakerJ1]
+./build.sh [../KlipperSnapmakerJ1]
+install/build.sh out J1_V2.8.0_20251217.bin install-out
 ```
 
-Needs Docker and `qemu-user-static` on Linux or WSL2, and a full eMMC dump
-of your own display module: the WLAN driver and configuration of its
-system partition are taken from it and are not part of this repository.
+Needs Docker and `qemu-user-static` on Linux or WSL2; the install
+package also `arm-linux-gnueabihf-gcc`, `apktool` and Java.  The image
+contains nothing of the stock system.  The official Snapmaker update
+package the stick is built on is named in `install/stock-package.conf`
+(download from Snapmaker).  The stock firmware package for the way back
+(`stock/build.sh`) needs a full eMMC dump of a display module with the
+Snapmaker system.
 
 | Path | Content |
 | --- | --- |
 | `build.sh` | builds `out/lk2nd.img`, `out/linux-boot.img` and `out/userdata.img` |
 | `boot/` | lk2nd and kernel build (pinned commits), `extlinux.conf` |
 | `rootfs/` | Debian packages, setup of the Klipper stack, services, configuration |
-| `tools/` | extraction from the dump |
+| `install/` | installation package for the USB stick (stock firmware → Klipper) |
+| `stock/` | stock firmware package (Klipper → stock firmware) |
+| `maint/` | maintenance system, writes the systems from the USB stick |
+| `tools/` | partitions of an eMMC dump |
 | `docs/` | analysis, design, installation |
 
 ## License
