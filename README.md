@@ -39,6 +39,15 @@ If the screen **Klipper installation** reports a failure, tap **Back to
 Snapmaker**: nothing has been changed yet.  The way back to the
 Snapmaker firmware: [installation](docs/INSTALL.md#klipper--snapmaker-firmware).
 
+> [!WARNING]
+> **Calibrate the printer right after the installation, before the first
+> print.**  Klipper starts with the values of an uncalibrated J1: the
+> nozzle height above the bed and the offset between the two nozzles are
+> not right, the first layer fails and a nozzle can crash into the bed.
+> In the **Calibration** menu run the assisted workflows in this order:
+> **Heated Bed Leveling, Z Offset Calibration, XY Offset Calibration,
+> Offset Calibration Check**, then **Vibration Compensation** once.
+
 ## The project at a glance
 
 | Repository | Role in the project |
