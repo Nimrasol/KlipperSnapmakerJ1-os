@@ -9,10 +9,11 @@ it builds the Linux system that runs Klipper, Moonraker, KlipperScreen and
 Mainsail on the display, the way a Raspberry Pi does on other printers.
 That is why the J1 needs no extra computer or screen for Klipper.
 
-> **Looking for the firmware for your J1?**  Start at
-> [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1):
-> the features, the user manual, the download and the installation are
-> there.  This repository is for building the display system yourself.
+> **Installing Klipper on your J1?**  Download the installation package
+> below and follow the six steps; the way back to the Snapmaker firmware
+> is in the [installation](docs/INSTALL.md).  The features and the user
+> manual are in
+> [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1).
 
 ## Install Klipper (Snapmaker firmware → Klipper)
 
