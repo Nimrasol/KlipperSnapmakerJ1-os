@@ -65,9 +65,9 @@ the Snapmaker app, so its setup starts as on a new printer.
   example a Raspberry Pi, with Python 3,
   [bkerler/edl](https://github.com/bkerler/edl) and pyserial.
 * A full eMMC backup of your display module (`sc20w-emmc-full.bin`), read
-  in Qualcomm EDL mode (below) with `edl rf sc20w-emmc-full.bin`.  The
-  build takes the WLAN driver and configuration from it, and it is the
-  way back to the stock system.
+  in Qualcomm EDL mode (below) with `edl rf sc20w-emmc-full.bin`.  It is
+  the way back to the stock system in EDL mode; the build does not need
+  it.
 * For building: a Linux PC (or WSL2) with Docker and `qemu-user-static`
   (binfmt handler for ARM), and
   [KlipperSnapmakerJ1](https://github.com/Nimrasol/KlipperSnapmakerJ1)
@@ -111,7 +111,7 @@ Afterwards the stock display can no longer control the printer.
 ## 2. Build the image
 
 ```
-./build.sh /path/to/sc20w-emmc-full.bin
+./build.sh
 ```
 
 Results in `out/`:

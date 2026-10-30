@@ -5,34 +5,27 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
-# Usage: ./build.sh DUMP [J1_REPO]
-#   DUMP     full eMMC dump of your display module (sc20w-emmc-full.bin)
+# Usage: ./build.sh [J1_REPO]
 #   J1_REPO  checkout of KlipperSnapmakerJ1 (default ../KlipperSnapmakerJ1)
 #
 # Requirements: Docker and a qemu-arm binfmt handler (qemu-user-static).
 # Results in out/: lk2nd.img (boot partition), linux-boot.img (cache
 # partition) and userdata.img (userdata partition); see docs/INSTALL.md.
+# Nothing of the stock system is needed to build: the WLAN firmware and
+# calibration are read on the printer from its own modem and persist
+# partitions.
 set -e
 
-DUMP="$(realpath "$1")"
 REPO="$(cd "$(dirname "$0")" && pwd)"
-J1="$(realpath "${2:-$REPO/../KlipperSnapmakerJ1}")"
+J1="$(realpath "${1:-$REPO/../KlipperSnapmakerJ1}")"
 OUT="$REPO/out"
 IMAGE_MIN_MB=3072
 
-if [ ! -f "$DUMP" ] || [ ! -f "$J1/install.sh" ]; then
-    sed -n '8,14p' "$0"
+if [ ! -f "$J1/install.sh" ]; then
+    sed -n '8,9p' "$0"
     exit 1
 fi
 mkdir -p "$OUT"
-
-echo "== Stock parts from the dump (kernel, WLAN firmware)"
-docker run --rm -v "$(dirname "$DUMP"):/dump:ro" -v "$REPO:/repo:ro" \
-    -v "$OUT:/out" debian:bookworm bash -e -c "
-apt-get -qq update
-apt-get -qq install -y --no-install-recommends python3 e2fsprogs > /dev/null
-python3 /repo/tools/extract_stock.py '/dump/$(basename "$DUMP")' /out/stock
-"
 
 echo "== lk2nd and kernel"
 "$REPO/boot/build.sh" "$OUT/boot"

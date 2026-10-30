@@ -1,0 +1,127 @@
+# Build the installation package (USB stick, stock firmware -> Klipper)
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+# Builds the display system (lk2nd, kernel, root file system with
+# KlipperSnapmakerJ1 and the main controller firmware) and the stick
+# contents on top of the official Snapmaker update package
+# (install/stock-package.conf, downloaded and checked here).  Started by
+# hand (Actions -> Build -> Run workflow) or by a tag vX.Y.Z, which
+# attaches the package to the release of the tag.
+#
+# The stock firmware package (the way back) is not built here: it needs
+# the eMMC dump of a display module with the Snapmaker system
+# (stock/build.sh).
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      j1_branch:
+        description: Branch of KlipperSnapmakerJ1 in the image
+        default: main
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  install-package:
+    # The release of Ubuntu the scripts are developed on (apktool 2.5,
+    # arm-linux-gnueabihf-gcc 11)
+    runs-on: ubuntu-22.04
+    # The root file system is set up under qemu emulation
+    timeout-minutes: 350
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+              /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune -af > /dev/null
+          df -h /
+
+      - name: Check out KlipperSnapmakerJ1-os
+        uses: actions/checkout@v4
+        with:
+          path: os
+          persist-credentials: false
+
+      # With its history and tags: the image keeps it as a git repository
+      # for the Moonraker update manager, on the branch it tracks
+      - name: Check out KlipperSnapmakerJ1
+        uses: actions/checkout@v4
+        with:
+          repository: Nimrasol/KlipperSnapmakerJ1
+          ref: ${{ inputs.j1_branch || 'main' }}
+          path: KlipperSnapmakerJ1
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: ARM emulation (qemu binfmt)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+
+      - name: Tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+              gcc-arm-linux-gnueabihf libc6-dev-armhf-cross apktool \
+              default-jre-headless zip > /dev/null
+          test -e /proc/sys/fs/binfmt_misc/qemu-arm
+          apktool --version
+
+      - name: Official Snapmaker update package
+        run: |
+          . os/install/stock-package.conf
+          mkdir -p stock
+          curl -fsSL --retry 3 -o "stock/$(basename "$URL")" "$URL"
+          echo "$SHA256  stock/$(basename "$URL")" | sha256sum -c
+
+      - name: Display system
+        run: os/build.sh "$GITHUB_WORKSPACE/KlipperSnapmakerJ1"
+
+      - name: Installation package
+        run: |
+          # Space for the stick: the root file system tree is in the image
+          sudo rm -f os/out/rootfs.tar
+          os/install/build.sh os/out stock/J1_V*.bin install-out
+          cd install-out
+          sha256sum KlipperSnapmakerJ1-install.zip > SHA256SUMS
+
+      - name: Versions
+        run: |
+          {
+            echo "### Versions in the image"
+            echo '```'
+            sudo debugfs -R "cat /etc/klipper-os-release" os/out/userdata.img 2>/dev/null
+            echo '```'
+            echo '```'
+            cat install-out/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the installation package
+        uses: actions/upload-artifact@v4
+        with:
+          name: KlipperSnapmakerJ1-install
+          path: |
+            install-out/KlipperSnapmakerJ1-install.zip
+            install-out/SHA256SUMS
+          compression-level: 0
+          retention-days: 30
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            install-out/KlipperSnapmakerJ1-install.zip
+            install-out/SHA256SUMS

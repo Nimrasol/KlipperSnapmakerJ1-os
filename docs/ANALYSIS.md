@@ -90,9 +90,10 @@ network for access could not work.
 
 ## Stock parts used
 
-Taken from the dump of the user's printer by `tools/extract_stock.py`, not
-distributed with this project: the stock kernel partition and the WLAN
-driver and configuration of the system partition.  The WLAN firmware
-and calibration are read on the printer from its own modem and persist
-partitions.  The pictures and test prints of the calibration menu are
+The image contains nothing of the stock system: the WLAN firmware and
+calibration are read on the printer from its own modem and persist
+partitions.  (The stock kernel and the WLAN driver of the system
+partition were only needed by the stock kernel route above.)  The stock
+firmware package for the way back is built from a dump
+(`stock/build.sh`) and the official Snapmaker update package.  The pictures and test prints of the calibration menu are
 part of KlipperSnapmakerJ1.
