@@ -14,6 +14,31 @@ That is why the J1 needs no extra computer or screen for Klipper.
 > the features, the user manual, the download and the installation are
 > there.  This repository is for building the display system yourself.
 
+## Install Klipper (Snapmaker firmware → Klipper)
+
+[![Download: Klipper installation](https://img.shields.io/badge/Download-Klipper_installation-ff8a00?style=for-the-badge&logo=github)](https://github.com/Nimrasol/KlipperSnapmakerJ1-os/releases/latest/download/KlipperSnapmakerJ1-install.zip)
+
+1. Unpack `KlipperSnapmakerJ1-install.zip` and copy its contents
+   (`J1_V*.bin` and the folder `install`) to a USB stick (FAT32, 2 GB or
+   more).
+2. Plug the stick into the USB port on the front of the printer.
+3. On the touch screen, start the firmware update from the USB stick and
+   confirm.
+4. Wait, leave the stick plugged in and do not switch the printer off.
+   The printer does the rest by itself:
+   - the Snapmaker update up to 99 %;
+   - **Klipper installation**, then the screen stays dark for up to a
+     minute;
+   - the Snapmaker logo and white text while Klipper is written (a few
+     minutes);
+   - the Klipper main menu.
+5. Connect the WLAN: **More → Network → WLAN**.
+6. Calibrate in the **Calibration** menu before the first print.
+
+If the screen **Klipper installation** reports a failure, tap **Back to
+Snapmaker**: nothing has been changed yet.  The way back to the
+Snapmaker firmware: [installation](docs/INSTALL.md#klipper--snapmaker-firmware).
+
 ## The project at a glance
 
 | Repository | Role in the project |
@@ -30,8 +55,8 @@ manager, like Klipper, Moonraker, KlipperScreen and Mainsail.
 > theme on the display, WLAN, SSH, Mainsail, Klipper connected to the main
 > controller, printing and the calibration menu.  The installation from a
 > USB stick on the stock touch screen and the way back to the stock
-> firmware work and are tested on one J1; the packages are not released
-> yet ([installation](docs/INSTALL.md)).
+> firmware work and are tested on one J1
+> ([installation](docs/INSTALL.md)).
 
 ## How it works
 
@@ -55,29 +80,19 @@ manager, like Klipper, Moonraker, KlipperScreen and Mainsail.
   driver with the firmware of the module's own modem and persist
   partitions.
 * The Qualcomm boot chain, Android system and recovery stay unchanged;
-  your EDL backup restores the stock system.
+  the stock firmware package restores the Snapmaker system from a USB
+  stick.
 
-Details: [analysis of the module](docs/ANALYSIS.md),
-[design](docs/DESIGN.md), [installation](docs/INSTALL.md).
+Details: [installation](docs/INSTALL.md),
+[analysis of the module](docs/ANALYSIS.md), [design](docs/DESIGN.md),
+[development](docs/DEVELOPMENT.md).
 
 ## Building
 
-GitHub Actions builds the installation package for the USB stick
-(**Actions → Build → Run workflow**, or a tag `vX.Y.Z`, which attaches it
-to the release); see `.github/workflows/build.yml`.  By hand:
-
-```
-./build.sh [../KlipperSnapmakerJ1]
-install/build.sh out J1_V2.8.0_20251217.bin install-out
-```
-
-Needs Docker and `qemu-user-static` on Linux or WSL2; the install
-package also `arm-linux-gnueabihf-gcc`, `apktool` and Java.  The image
-contains nothing of the stock system.  The official Snapmaker update
-package the stick is built on is named in `install/stock-package.conf`
-(download from Snapmaker).  The stock firmware package for the way back
-(`stock/build.sh`) needs a full eMMC dump of a display module with the
-Snapmaker system.
+GitHub Actions builds the installation package (**Actions → Build → Run
+workflow**, or a tag `vX.Y.Z`).  Building by hand, how the USB stick
+installation works and the installation in EDL mode:
+[development](docs/DEVELOPMENT.md).
 
 | Path | Content |
 | --- | --- |
@@ -88,7 +103,7 @@ Snapmaker system.
 | `stock/` | stock firmware package (Klipper → stock firmware) |
 | `maint/` | maintenance system, writes the systems from the USB stick |
 | `tools/` | partitions of an eMMC dump |
-| `docs/` | analysis, design, installation |
+| `docs/` | installation, analysis, design, development |
 
 ## License
 
