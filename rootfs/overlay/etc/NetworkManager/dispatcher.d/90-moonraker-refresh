@@ -14,6 +14,9 @@ case "$2" in
     up|connectivity-change) ;;
     *) exit 0 ;;
 esac
+# Not for the loopback device: it comes up at every start, without a
+# network, and its event would use up the one refresh below
+[ "$1" = lo ] && exit 0
 [ "$2" = connectivity-change ] && [ "$CONNECTIVITY_STATE" != FULL ] && exit 0
 # Once for both events of a connection
 STAMP=/run/j1-update-refresh
