@@ -39,6 +39,15 @@ zip file and copy **its contents** to the top level of the stick.
 If the screen **Klipper installation** reports a failure, tap **Back to
 Snapmaker**: nothing has been changed yet.
 
+> [!WARNING]
+> **Calibrate the printer right after the installation, before the first
+> print.**  Klipper starts with the values of an uncalibrated J1: the
+> nozzle height above the bed and the offset between the two nozzles are
+> not right, the first layer fails and a nozzle can crash into the bed.
+> In the **Calibration** menu run the assisted workflows in this order:
+> **Heated Bed Leveling, Z Offset Calibration, XY Offset Calibration,
+> Offset Calibration Check**, then **Vibration Compensation** once.
+
 ## Klipper → Snapmaker firmware
 
 1. Copy the contents of `J1-Stock-Firmware.zip` to the stick:

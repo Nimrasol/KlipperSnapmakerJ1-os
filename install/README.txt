@@ -27,5 +27,11 @@ Snapmaker app comes back (it may be an older version; update it again with
 an official Snapmaker update package).  Until the printer restarts into the
 installer, nothing of the Snapmaker system has been changed.
 
-After the first start, connect the WLAN (More -> Network -> WLAN) and run
-the calibrations.
+After the first start, connect the WLAN (More -> Network -> WLAN).
+
+!!! WARNING: CALIBRATE BEFORE THE FIRST PRINT !!!
+Klipper starts with the values of an uncalibrated J1: the nozzle height
+and the offset between the nozzles are not right, a nozzle can crash
+into the bed.  In the Calibration menu run the assisted workflows in this
+order: Heated Bed Leveling, Z Offset Calibration, XY Offset Calibration,
+Offset Calibration Check, then Vibration Compensation once.
