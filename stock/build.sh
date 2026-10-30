@@ -10,7 +10,7 @@
 #   PACKAGE  official Snapmaker update package (eg J1_V2.8.0_20251217.bin)
 #
 # Requirements: Docker (privileged containers, for loop mounts).
-# Result: out/J1-Stock-Firmware-<package>.zip with the package, the
+# Result: out/J1-Stock-Firmware.zip with the package, the
 # cleaned Snapmaker system in stock-restore/ and a README.
 set -e
 
@@ -18,7 +18,6 @@ DUMP="$(realpath "$1")"
 PACKAGE="$(realpath "$2")"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$REPO/out/stock"
-NAME="$(basename "$PACKAGE" .bin)"
 
 if [ ! -f "$DUMP" ] || [ ! -f "$PACKAGE" ]; then
     sed -n '8,10p' "$0"
@@ -85,7 +84,7 @@ sha256sum boot.img userdata.img.gz userdata-footer.bin cache.img.gz > manifest
 
 cp "$PACKAGE" "$OUT/stick/"
 sed 's/$/\r/' "$REPO/stock/README.txt" > "$OUT/stick/README-Stock-Firmware.txt"
-ZIP="$REPO/out/J1-Stock-Firmware-$NAME.zip"
+ZIP="$REPO/out/J1-Stock-Firmware.zip"
 rm -f "$ZIP"
 (cd "$OUT/stick" && zip -q -r -0 "$ZIP" .)
 ls -l "$ZIP"
