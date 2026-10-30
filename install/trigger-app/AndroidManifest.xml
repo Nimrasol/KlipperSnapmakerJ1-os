@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Installer trigger for the way from the Snapmaker system to Klipper.
+
+  Copyright (C) 2026  Nimrasol
+  This file may be distributed under the terms of the GNU GPLv3 license.
+
+  The stock USB-update flow installs this as the "screen app" (it replaces
+  com.snapmaker.j1) and relaunches it.  The stock app is registered with an
+  app user id (no shared user id), so this package keeps the name and runs
+  with that user id too; like the stock app it is signed with the public
+  AOSP platform key.  It installs and starts the installer app
+  (com.nimrasol.j1installer), which may join the system user id and hands
+  the OTA package to the recovery.  "Back to Snapmaker" removes this update,
+  which brings back the stock app kept in /system/app/j1.
+  The version code equals the stock one, so a stock update package can
+  replace this app again.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.snapmaker.j1"
+    android:versionCode="1"
+    android:versionName="klipper-install">
+
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.DELETE_PACKAGES"/>
+
+    <application android:label="Klipper Installer" android:hasCode="true">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.HOME"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <receiver android:name=".Replaced" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

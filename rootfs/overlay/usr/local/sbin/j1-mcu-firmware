@@ -1,0 +1,38 @@
+#!/bin/sh
+# First boot of KlipperSnapmakerJ1-os: install the Klipper firmware on the
+# main controller, before Klipper starts
+#
+# Copyright (C) 2026  Nimrasol
+#
+# This file may be distributed under the terms of the GNU GPLv3 license.
+#
+# A printer installed from the Snapmaker system (USB stick) still runs the
+# stock firmware, which Klipper cannot talk to.  snapmaker_j1_flash.py
+# installs the image through the factory bootloader from the stock firmware
+# as well as from an earlier Klipper firmware.  The image is built with the
+# root file system (firmware/build.sh, matching the installed Klipper); it
+# is built here if it is missing.  On failure Klipper starts anyway and the
+# next start tries again, at most three times.
+J1=/home/pi/KlipperSnapmakerJ1
+IMAGE=$J1/firmware/out/mc.bin
+STATE=/var/lib/klipper-os
+LOG=/var/log/j1-mcu-firmware.log
+
+mkdir -p $STATE
+tries=$(cat $STATE/mcu-firmware-tries 2>/dev/null || echo 0)
+if [ "$tries" -ge 3 ]; then
+    echo "$(date) given up after $tries tries" >> $LOG
+    exit 0
+fi
+echo $((tries + 1)) > $STATE/mcu-firmware-tries
+
+{
+    echo "== $(date) try $((tries + 1))"
+    if [ ! -f $IMAGE ]; then
+        runuser -u pi -- $J1/firmware/build.sh || exit 1
+    fi
+    runuser -u pi -- /home/pi/klippy-env/bin/python \
+        $J1/scripts/snapmaker_j1_flash.py -w 30 $IMAGE || exit 1
+    touch $STATE/mcu-firmware-done
+    echo "== done"
+} >> $LOG 2>&1
