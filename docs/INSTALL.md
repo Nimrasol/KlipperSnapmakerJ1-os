@@ -20,9 +20,7 @@ zip file and copy **its contents** to the top level of the stick.
 
 ## Snapmaker firmware → Klipper
 
-**Video:** [Install Klipper on a Snapmaker J1 / J1s](https://www.youtube.com/watch?v=U0IwCsgZC0M)
-
-[![Video: Install Klipper on a Snapmaker J1 / J1s](https://img.youtube.com/vi/U0IwCsgZC0M/hqdefault.jpg)](https://www.youtube.com/watch?v=U0IwCsgZC0M)
+<a href="https://www.youtube.com/watch?v=U0IwCsgZC0M"><img src="img/video-install.jpg" width="640" alt="Video: Install Klipper on a Snapmaker J1 / J1s"></a>
 
 > [!CAUTION]
 > **This takes a while: about 7 minutes.  Do not pull the USB
@@ -61,9 +59,7 @@ Snapmaker**: nothing has been changed yet.
 
 ## Klipper → Snapmaker firmware
 
-**Video:** [Restore Snapmaker J1 Stock Firmware from Klipper](https://www.youtube.com/watch?v=L98PkPFao04)
-
-[![Video: Restore Snapmaker J1 Stock Firmware from Klipper](https://img.youtube.com/vi/L98PkPFao04/hqdefault.jpg)](https://www.youtube.com/watch?v=L98PkPFao04)
+<a href="https://www.youtube.com/watch?v=L98PkPFao04"><img src="img/video-restore.jpg" width="640" alt="Video: Restore Snapmaker J1 Stock Firmware from Klipper"></a>
 
 > [!CAUTION]
 > **This takes a while: about 3 minutes.  Do not pull the USB

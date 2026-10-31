@@ -19,9 +19,7 @@ That is why the J1 needs no extra computer or screen for Klipper.
 
 [![Download: Klipper installation](https://img.shields.io/badge/Download-Klipper_installation-ff8a00?style=for-the-badge&logo=github)](https://github.com/Nimrasol/KlipperSnapmakerJ1-os/releases/latest/download/KlipperSnapmakerJ1-install.zip)
 
-**Video:** [Install Klipper on a Snapmaker J1 / J1s](https://www.youtube.com/watch?v=U0IwCsgZC0M)
-
-[![Video: Install Klipper on a Snapmaker J1 / J1s](https://img.youtube.com/vi/U0IwCsgZC0M/hqdefault.jpg)](https://www.youtube.com/watch?v=U0IwCsgZC0M)
+<a href="https://www.youtube.com/watch?v=U0IwCsgZC0M"><img src="docs/img/video-install.jpg" width="640" alt="Video: Install Klipper on a Snapmaker J1 / J1s"></a>
 
 > [!CAUTION]
 > **This takes a while: about 7 minutes.  Do not pull the USB
