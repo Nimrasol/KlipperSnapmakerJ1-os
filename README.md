@@ -17,7 +17,14 @@ That is why the J1 needs no extra computer or screen for Klipper.
 
 ## Install Klipper (Snapmaker firmware → Klipper)
 
-[![Download: Klipper installation](https://img.shields.io/badge/Download-Klipper_installation-ff8a00?style=for-the-badge&logo=github)](https://github.com/Nimrasol/KlipperSnapmakerJ1-os/releases/latest/download/KlipperSnapmakerJ1-install.zip)
+> [!WARNING]
+> **The Klipper installation is paused for the moment.**  Not all
+> hardware versions of the J1 display module are supported yet: on some
+> printers the display stays dark after the installation
+> ([issue #1](https://github.com/Nimrasol/KlipperSnapmakerJ1/issues/1)).
+> The installation package will be available again as soon as this is
+> solved.  Printers that already run Klipper are not affected, and the way
+> back to the stock firmware stays available.
 
 <a href="https://www.youtube.com/watch?v=U0IwCsgZC0M"><img src="https://img.youtube.com/vi/U0IwCsgZC0M/maxresdefault.jpg" width="640" alt="Video: Install Klipper on a Snapmaker J1 / J1s"></a>
 
