@@ -26,6 +26,16 @@ cd /build
 # lk2nd at the revision of the klipper4j1 release
 git clone -q "$LK2ND_REPO" lk2nd
 git -C lk2nd -c advice.detachedHead=false checkout -q "$LK2ND_COMMIT"
+# The stock bootloader only starts lk2nd if its device tree matches the
+# board.  eazrael's lk2nd lists one board variant (8/0x00, "MSM8909-PM8909
+# 1GB MTP"); the stock kernel of the J1 carries four MSM8909 + PM8909 MTP
+# variants (RAM size, charger), so display modules of other batches may
+# report another one.  Other PMICs are left out on purpose: the kernel
+# device tree sets PM8909 voltages.
+LK2ND_DTS=lk2nd/lk2nd/device/dts/msm8909/msm8909-snapmakerj1.dts
+grep -q 'qcom,board-id = <0x08 0x00>;' "$LK2ND_DTS"
+sed -i 's/qcom,board-id = <0x08 0x00>;/qcom,board-id = <0x08 0x00>, <0x08 0x100>, <0x08 0x03>, <0x08 0x103>;/' \
+    "$LK2ND_DTS"
 make -C lk2nd -s -j"$(nproc)" BOOTLOADER_OUT=snapmakerj1 \
     TOOLCHAIN_PREFIX=arm-none-eabi- lk2nd-msm8909
 cp lk2nd/snapmakerj1/*/lk2nd.img /out/lk2nd.img
