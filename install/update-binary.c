@@ -191,8 +191,14 @@ static int write_image(const char *src, const char *partname,
 }
 
 /* Clear the bootloader control block (command, status, recovery arguments,
-   stage: the first 2 KB of misc) so the next boot is normal; read back to
-   make sure. */
+   stage: 2 KB) so the next boot is normal; read back to make sure.  The J1
+   system keeps it at 512 KB into misc, where Android writes the recovery
+   request ("boot-recovery --update_package=..."), not at the AOSP offset 0;
+   both are cleared.  A request left at 512 KB starts the recovery again
+   after the installation, which then finds no package (the cache holds the
+   Linux boot by then) and restarts forever with the display off. */
+static const off_t bcb_offsets[] = { 0, 512 * 1024 };
+
 static int clear_bcb(void)
 {
     char dev[256];
@@ -202,10 +208,15 @@ static int clear_bcb(void)
     if (fd < 0)
         return -1;
     static unsigned char zero[2048], back[2048];
-    int ok = pwrite(fd, zero, sizeof(zero), 0) == (ssize_t)sizeof(zero);
-    fsync(fd);
-    ok = ok && pread(fd, back, sizeof(back), 0) == (ssize_t)sizeof(back)
-            && memcmp(back, zero, sizeof(zero)) == 0;
+    int ok = 1;
+    for (size_t i = 0; i < sizeof(bcb_offsets) / sizeof(bcb_offsets[0]); i++)
+        ok = ok && pwrite(fd, zero, sizeof(zero), bcb_offsets[i])
+                       == (ssize_t)sizeof(zero);
+    ok = ok && fsync(fd) == 0;
+    for (size_t i = 0; i < sizeof(bcb_offsets) / sizeof(bcb_offsets[0]); i++)
+        ok = ok && pread(fd, back, sizeof(back), bcb_offsets[i])
+                       == (ssize_t)sizeof(back)
+                && memcmp(back, zero, sizeof(zero)) == 0;
     close(fd);
     return ok ? 0 : -1;
 }
