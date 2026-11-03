@@ -71,12 +71,13 @@ The system is installed once.  Afterwards everything printer specific
 comes from KlipperSnapmakerJ1 and is updated through the Moonraker update
 manager, like Klipper, Moonraker, KlipperScreen and Mainsail.
 
-> **Status:** runs on the J1 (board revision 2): KlipperScreen with the J1
-> theme on the display, WLAN, SSH, Mainsail, Klipper connected to the main
-> controller, printing and the calibration menu.  The installation from a
-> USB stick on the stock touch screen and the way back to the stock
-> firmware work and are tested on one J1
-> ([installation](docs/INSTALL.md)).
+> **Status:** runs on the J1: KlipperScreen with the J1 theme on the
+> display, WLAN, SSH, Mainsail, Klipper connected to the main controller,
+> printing and the calibration menu.  Klipper detects the main board
+> revision and sets its pins by itself (revision 1 is not tested on a
+> printer yet).  The installation from a USB stick on the stock touch
+> screen and the way back to the stock firmware work and are tested on
+> the J1 printers of two owners ([installation](docs/INSTALL.md)).
 
 ## How it works
 
