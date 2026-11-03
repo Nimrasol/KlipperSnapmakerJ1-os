@@ -24,6 +24,9 @@
 #   install/rootfs.img.gz  Klipper root fs        ) written by maint
 #   install/manifest       sha256 of the above
 #
+# The OTA package checks lk2nd.img against a digest compiled into it and
+# linux-boot.img against install/manifest.
+#
 # Requirements: Docker, arm-linux-gnueabihf-gcc, apktool, java, curl, zip.
 set -e
 
@@ -44,26 +47,36 @@ STICK="$OUTDIR/stick"
 echo "== 1/7  maintenance system (install mode)"
 "$REPO/maint/build.sh" "$OSOUT/boot" "$BUILD/maint.cpio.gz"
 
-echo "== 2/7  linux-boot image in install mode (default=maint, request=install)"
-# extlinux that boots maint by default; maint sees request=install
+cp "$OSOUT/lk2nd.img" "$STICK/install/lk2nd.img"
+
+echo "== 2/7  OTA package (signed, recovery-trusted test key)"
+"$HERE/build-ota.sh" "$STICK/install/lk2nd.img" "$BUILD/klipper-ota.zip"
+
+echo "== 3/7  linux-boot image in install mode (default=maint, request=install)"
+# extlinux that boots maint by default; maint sees request=install.
+# recovery/klipper-ota.zip: a copy of the OTA package where the recovery
+# looks for it, so a recovery started again after the OTA wrote this image
+# runs the installation once more instead of looping (labelled for the
+# SELinux policy of the recovery).
 sed 's/^default .*/default maint/' "$REPO/boot/extlinux.conf" > "$BUILD/extlinux.conf"
 docker run --rm -v "$BUILD:/b" -v "$OSOUT:/os:ro" debian:bookworm bash -e -c '
 apt-get -qq update; apt-get -qq install -y --no-install-recommends e2fsprogs > /dev/null
 root=/b/bootfs
-mkdir -p $root/extlinux $root/maint
+mkdir -p $root/extlinux $root/maint $root/recovery
 cp /os/boot/zImage /os/boot/snapmakerj1.dtb /b/maint.cpio.gz $root/
 cp /b/extlinux.conf $root/extlinux/extlinux.conf
+cp /b/klipper-ota.zip $root/recovery/klipper-ota.zip
 printf install > $root/maint/request
 rm -f /b/linux-boot.img
 mke2fs -q -t ext2 -L linux_boot -d $root /b/linux-boot.img 64M
+printf "u:object_r:cache_recovery_file:s0\0" > /tmp/ctx
+for f in /recovery /recovery/klipper-ota.zip; do
+    debugfs -w -R "ea_set -f /tmp/ctx $f security.selinux" /b/linux-boot.img
+done
+debugfs -R "ea_list /recovery/klipper-ota.zip" /b/linux-boot.img
 e2fsck -fn /b/linux-boot.img > /dev/null
 '
-cp "$OSOUT/lk2nd.img" "$STICK/install/lk2nd.img"
 cp "$BUILD/linux-boot.img" "$STICK/install/linux-boot.img"
-
-echo "== 3/7  OTA package (signed, recovery-trusted test key)"
-"$HERE/build-ota.sh" "$STICK/install/lk2nd.img" "$STICK/install/linux-boot.img" \
-    "$BUILD/klipper-ota.zip"
 
 echo "== 4/7  installer app (platform-key signed)"
 "$HERE/build-app.sh" "$BUILD/klipper-ota.zip" "$BUILD/trigger.apk"

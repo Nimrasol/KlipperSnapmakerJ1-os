@@ -25,6 +25,14 @@ lk2nd and the device tree of the display module come from
 armbian-build fork).  `boot/inside.sh` builds both at pinned commits in a
 Debian container; nothing of his Klipper setup is used.
 
+The stock bootloader starts lk2nd only if lk2nd's device tree matches the
+board (`qcom,msm-id`, `qcom,pmic-id`, `qcom,board-id`).  eazrael's lk2nd
+lists one board variant (8/0x00, "MSM8909-PM8909 1GB MTP");
+`boot/inside.sh` adds the other MSM8909 + PM8909 MTP variants of the stock
+kernel (8/0x100, 8/0x03, 8/0x103: other RAM sizes and chargers), so
+display modules of other batches are accepted as well.  Variants with
+another PMIC stay out: the kernel device tree sets PM8909 voltages.
+
 The kernel command line (`boot/extlinux.conf`) keeps the console quiet,
 rotates the text console to the landscape mounting and passes lk2nd's
 framebuffer on (`lk2nd.pass-simplefb=autorefresh`): the display runs
