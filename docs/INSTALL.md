@@ -48,6 +48,10 @@ zip file and copy **its contents** to the top level of the stick.
 If the screen **Klipper installation** reports a failure, tap **Back to
 Snapmaker**: nothing has been changed yet.
 
+The installation writes its logs to the folder `install` on the stick
+(`install-log.txt`, `maint-log.txt`).  If something goes wrong, attach
+them to an [issue](https://github.com/Nimrasol/KlipperSnapmakerJ1/issues).
+
 > [!WARNING]
 > **Calibrate the printer right after the installation, before the first
 > print.**  Klipper starts with the values of an uncalibrated J1: the
