@@ -44,6 +44,12 @@ keep_log() {
         echo "== dmesg"; dmesg | tail -n 80
     } >> $LOG 2>&1
     [ -d $CACHE_MNT/maint ] && cp $LOG $CACHE_MNT/maint/log
+    # Next to the install log of the OTA (install/install-log.txt)
+    if [ -d $STICK/install ] && mount -o remount,rw $STICK 2>/dev/null; then
+        cp $LOG $STICK/install/maint-log.txt
+        sync
+        mount -o remount,ro $STICK 2>/dev/null
+    fi
 }
 fail() {
     say ""
@@ -191,7 +197,12 @@ do_install() {
     # start boots Klipper.
     set_default j1
     rm -f $CACHE_MNT/maint/request
+    # The copy of the OTA package for a repeated recovery run (see
+    # install/build.sh) and what the recovery left is no longer needed
+    rm -rf $CACHE_MNT/recovery $CACHE_MNT/update_fail_flag
+    say "Klipper system written."
     cd /
+    keep_log
     umount $STICK
     umount $CACHE_MNT
     sync

@@ -59,14 +59,24 @@ The stick holds `J1_V*.bin` and `install/` (`lk2nd.img`,
    installer app (`install/installer-app`, signed with the platform key,
    system user).
 2. The installer app hands a signed OTA package to the stock recovery
-   (`RecoverySystem.installPackage`).  Its `update-binary` checks the
-   images on the stick against the sha256 compiled into it, writes lk2nd
-   to `boot` and `linux-boot.img` to `cache`, clears the boot command in
-   `misc` and restarts.  The recovery shows nothing on the J1: the
-   screen stays dark for up to a minute.
+   (`RecoverySystem.installPackage`).  Its `update-binary` reads lk2nd
+   and `linux-boot.img` from the stick into memory and checks them
+   (lk2nd against the sha256 compiled into it, `linux-boot.img` against
+   `install/manifest`), unmounts the stick, writes lk2nd to `boot` and
+   `linux-boot.img` to `cache` in small flushed steps, clears the boot
+   command in `misc` (at 0 and at 512 KB, the copy of the J1 recovery)
+   and restarts.  The recovery shows nothing on the J1: the screen stays
+   dark for up to a minute.  Every run is logged to
+   `install/install-log.txt` on the stick; a run that did not end leaves
+   the kernel log of that start (`last_kmsg-N.txt`) for the next one.
+   `linux-boot.img` carries a copy of the OTA package in
+   `recovery/klipper-ota.zip`: should the recovery start again after the
+   OTA (the Snapmaker recovery restarts itself after a failed run), it
+   runs the installation once more instead of looping.
 3. lk2nd starts the maintenance system (`maint/`, extlinux label
    `maint`), which checks `rootfs.img.gz` and writes it to `userdata`,
-   then starts Linux.
+   removes the package copy from `cache`, puts its log next to the
+   install log (`install/maint-log.txt`) and starts Linux.
 4. The first start installs the Klipper firmware on the main controller
    (`j1-mcu-firmware.service`, `snapmaker_j1_flash.py`, at most three
    tries, log in `/var/log/j1-mcu-firmware.log`), then Klipper starts.

@@ -6,28 +6,28 @@
 #
 # This file may be distributed under the terms of the GNU GPLv3 license.
 #
-# Usage: install/build-ota.sh LK2ND LINUX_BOOT OUT_ZIP
+# Usage: install/build-ota.sh LK2ND OUT_ZIP
 #   LK2ND       lk2nd.img (boot partition image)
-#   LINUX_BOOT  linux-boot.img built in install mode (cache partition image)
 #   OUT_ZIP     signed OTA package to write
 #
 # The images are NOT put into the package (it stays small); the package only
 # carries the update-binary, which reads the images from the USB stick and
-# checks them against the sha256 compiled in here.  The package is signed
-# with the public AOSP test key, which the stock recovery trusts.
+# checks lk2nd.img against the sha256 compiled in here and linux-boot.img
+# against install/manifest (linux-boot.img carries a copy of this package,
+# see install/build.sh).  The package is signed with the public AOSP test
+# key, which the stock recovery trusts.
 #
 # Requirements: arm-linux-gnueabihf-gcc, java, curl, zip.
 set -e
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LK2ND="$(realpath "$1")"
-LINUX_BOOT="$(realpath "$2")"
-OUT="$(realpath -m "$3")"
+OUT="$(realpath -m "$2")"
 WORK="${TMPDIR:-/tmp}/j1-ota.$$"
 CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/j1-ota"
 
-if [ ! -f "$LK2ND" ] || [ ! -f "$LINUX_BOOT" ] || [ -z "$3" ]; then
-    sed -n '8,12p' "$0"
+if [ ! -f "$LK2ND" ] || [ -z "$2" ]; then
+    sed -n '9,11p' "$0"
     exit 1
 fi
 mkdir -p "$WORK" "$CACHE"
@@ -64,7 +64,8 @@ gen_digest() {  # gen_digest NAME FILE
     echo "#ifndef DIGESTS_H"
     echo "#define DIGESTS_H"
     gen_digest SHA256_LK2ND "$LK2ND"
-    gen_digest SHA256_LINUX_BOOT "$LINUX_BOOT"
+    printf '#define INSTALLER_VERSION "%s"\n' \
+        "$(git -C "$HERE" describe --tags --always --dirty 2>/dev/null || echo unknown)"
     echo "#endif"
 } > "$WORK/digests.h"
 
