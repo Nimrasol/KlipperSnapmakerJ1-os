@@ -39,6 +39,11 @@
  * run that did not end), so a failed installation can be analysed without
  * a dump of the eMMC.
  *
+ * Test switch: an (empty) file install/test-repeat on the stick makes the
+ * first run stop after writing boot and cache, without clearing the
+ * recovery request, and restart into the recovery, as a cut run would.
+ * The repeated run removes the file and completes the installation.
+ *
  * recovery calls:  update-binary <api> <pipefd> <zipfile>
  */
 #include <dirent.h>
@@ -567,6 +572,17 @@ int main(int argc, char **argv)
           INSTALLER_VERSION, argc >= 4 ? argv[3] : "?", g_stick_dev,
           g_stick_rw ? "" : " read-only", earlier);
     log_boot_reason();
+    char sw[450];
+    snprintf(sw, sizeof(sw), "%s/test-repeat", dir);
+    int test_repeat = 0;
+    if (access(sw, F_OK) == 0) {
+        if (earlier == 0) {
+            test_repeat = 1;
+            logf_("TEST: test-repeat found, this run stops after the cache");
+        } else if (unlink(sw) == 0) {
+            logf_("TEST: test-repeat removed");
+        }
+    }
     if (earlier > 0) {
         /* A run before did not end: keep what tells why */
         char name[64];
@@ -620,6 +636,17 @@ int main(int argc, char **argv)
         ui("FATAL: cache half written, retrying once...");
         if (write_image(lb_data, lb_len, "cache") != 0)
             die("Linux boot partition not written");
+    }
+
+    if (test_repeat) {
+        ui("TEST: stopping here, restarting into the recovery...");
+        stick_mount();
+        stick_umount();
+        sync();
+        sleep(2);
+        syscall(SYS_reboot, LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
+                LINUX_REBOOT_CMD_RESTART2, "recovery");
+        logf_("TEST: reboot into the recovery failed: %s", strerror(errno));
     }
 
     /* The recovery package was on the old cache: a recovery started again
