@@ -18,6 +18,7 @@ server {
 
     root /home/pi/mainsail;
     index index.html;
+    include /etc/nginx/snapmaker_j1/*.conf;
 
     # Print files of any size, streamed to Moonraker
     client_max_body_size 0;

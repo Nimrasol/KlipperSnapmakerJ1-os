@@ -39,6 +39,8 @@ libnss-myhostname
 # Web interface: Mainsail behind nginx on port 80
 nginx-light
 unzip
+# Webcam stream to Mainsail (USB camera; set up by KlipperSnapmakerJ1)
+ustreamer
 # Klipper, Moonraker and KlipperScreen
 python3
 python3-venv
