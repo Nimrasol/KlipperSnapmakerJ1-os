@@ -9,7 +9,7 @@
 #
 # Usage: install/build.sh OSOUT STOCK_PACKAGE OUTDIR
 #   OSOUT          the out/ directory of a KlipperSnapmakerJ1-os build
-#                  (boot/zImage, boot/snapmakerj1.dtb, boot/modules/,
+#                  (boot/zImage, boot/snapmakerj1.dtb, boot/maint.cpio.gz,
 #                  lk2nd.img, userdata.img)
 #   STOCK_PACKAGE  an official Snapmaker update package (J1_V*.bin); its
 #                  genuine main controller firmware is reused so the stock
@@ -37,15 +37,15 @@ STOCK="$(realpath "$2")"
 OUTDIR="$(realpath -m "$3")"
 BUILD="$OUTDIR/build"
 
-for f in boot/zImage boot/snapmakerj1.dtb boot/modules lk2nd.img userdata.img; do
+for f in boot/zImage boot/snapmakerj1.dtb boot/maint.cpio.gz lk2nd.img userdata.img; do
     [ -e "$OSOUT/$f" ] || { echo "missing $OSOUT/$f"; sed -n '9,16p' "$0"; exit 1; }
 done
 [ -f "$STOCK" ] || { echo "missing $STOCK"; exit 1; }
 rm -rf "$BUILD"; mkdir -p "$BUILD" "$OUTDIR/stick/install"
 STICK="$OUTDIR/stick"
 
-echo "== 1/7  maintenance system (install mode)"
-"$REPO/maint/build.sh" "$OSOUT/boot" "$BUILD/maint.cpio.gz"
+echo "== 1/7  maintenance system (from the build.sh output)"
+cp "$OSOUT/boot/maint.cpio.gz" "$BUILD/maint.cpio.gz"
 
 cp "$OSOUT/lk2nd.img" "$STICK/install/lk2nd.img"
 

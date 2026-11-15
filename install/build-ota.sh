@@ -24,32 +24,19 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 LK2ND="$(realpath "$1")"
 OUT="$(realpath -m "$2")"
 WORK="${TMPDIR:-/tmp}/j1-ota.$$"
-CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/j1-ota"
 
 if [ ! -f "$LK2ND" ] || [ -z "$2" ]; then
     sed -n '9,11p' "$0"
     exit 1
 fi
-mkdir -p "$WORK" "$CACHE"
+mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
 # -- the public AOSP test key and the AOSP whole-file signer ----------------
-TAG=android-7.1.2_r39
-gfetch() {  # gfetch REPO PATH OUTFILE   (googlesource base64 download)
-    [ -s "$CACHE/$3" ] && return 0
-    echo "fetch $3"
-    curl -fsSL "https://android.googlesource.com/platform/$1/+/refs/tags/$TAG/$2?format=TEXT" \
-        | base64 -d > "$CACHE/$3"
-}
-gfetch build target/product/security/testkey.x509.pem testkey.x509.pem
-gfetch build target/product/security/testkey.pk8 testkey.pk8
-# signapk from 6.0.1: bundles bouncycastle, no conscrypt native dependency;
-# the whole-file OTA format it emits is the one the recovery expects.
-if [ ! -s "$CACHE/signapk.jar" ]; then
-    echo "fetch signapk.jar"
-    curl -fsSL "https://android.googlesource.com/platform/prebuilts/sdk/+/refs/tags/android-6.0.1_r81/tools/lib/signapk.jar?format=TEXT" \
-        | base64 -d > "$CACHE/signapk.jar"
-fi
+. "$HERE/fetch.sh"
+gfetch testkey.x509.pem
+gfetch testkey.pk8
+gfetch signapk.jar
 
 # -- generated digests.h ----------------------------------------------------
 gen_digest() {  # gen_digest NAME FILE

@@ -19,7 +19,6 @@ set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OTA="$(realpath "$1")"
 OUT="$(realpath -m "$2")"
-CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/j1-ota"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -32,18 +31,10 @@ fi
 # system: the trigger replaces the stock app, the installer app joins the
 # system user id.
 # (The OTA itself is signed with the test key, see build-ota.sh.)
-mkdir -p "$CACHE"
-gfetch() {
-    [ -s "$CACHE/$2" ] && return 0
-    curl -fsSL "https://android.googlesource.com/platform/$1?format=TEXT" \
-        | base64 -d > "$CACHE/$2"
-}
-gfetch "build/+/refs/tags/android-7.1.2_r39/target/product/security/platform.x509.pem" platform.x509.pem
-gfetch "build/+/refs/tags/android-7.1.2_r39/target/product/security/platform.pk8" platform.pk8
-if [ ! -s "$CACHE/signapk.jar" ]; then
-    curl -fsSL "https://android.googlesource.com/platform/prebuilts/sdk/+/refs/tags/android-6.0.1_r81/tools/lib/signapk.jar?format=TEXT" \
-        | base64 -d > "$CACHE/signapk.jar"
-fi
+. "$HERE/fetch.sh"
+gfetch platform.x509.pem
+gfetch platform.pk8
+gfetch signapk.jar
 
 # build_apk PROJECT ASSET_SRC ASSET_NAME OUT: apktool project with one
 # asset, signed with the platform key
