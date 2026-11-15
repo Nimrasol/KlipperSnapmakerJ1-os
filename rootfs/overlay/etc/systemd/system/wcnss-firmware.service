@@ -6,6 +6,9 @@ Before=NetworkManager.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+# A oneshot waits forever by default; a hanging firmware load would keep
+# NetworkManager (ordered after this) from starting, so no network at all
+TimeoutStartSec=30
 ExecStart=/sbin/modprobe --ignore-install qcom_wcnss_pil
 
 [Install]
