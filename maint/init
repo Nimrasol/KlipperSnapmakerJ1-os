@@ -69,7 +69,11 @@ fail() {
 abort() {
     say ""
     say "ERROR: $*"
-    say "Nothing was changed.  The printer starts Klipper again."
+    # Only the restore aborts: the main controller already got the
+    # Snapmaker firmware from the Linux system before this start
+    say "The display is unchanged and starts Klipper again, but the main"
+    say "controller already has the Snapmaker firmware: Klipper cannot"
+    say "connect.  Start the return to the stock firmware again."
     keep_log
     set_default j1
     umount $STICK 2>/dev/null
