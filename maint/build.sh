@@ -32,12 +32,11 @@ mkdir -p \$root/bin \$root/sbin \$root/lib/modules
 dpkg-deb -x busybox-static_*_armhf.deb /tmp/bb
 cp /tmp/bb/bin/busybox \$root/bin/busybox
 # The applets as links (the list through the qemu binfmt handler of the
-# build host, or the applets maint/init uses), the SCSI disk driver and
+# build host: without it the build stops here), the SCSI disk driver and
 # the code pages for vfat (built as modules; udev loads them in the Linux
 # system)
-for a in \$(/tmp/bb/bin/busybox --list 2>/dev/null \
-        || echo sh [ test mount umount cat sed grep printf sleep insmod \
-             dd gunzip sha256sum cmp wc mkdir reboot ls true); do
+apps=\$(/tmp/bb/bin/busybox --list)
+for a in \$apps; do
     [ \$a = busybox ] || ln -sf busybox \$root/bin/\$a
 done
 for m in sd_mod nls_cp437 nls_iso8859-1; do
