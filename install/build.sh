@@ -9,8 +9,7 @@
 #
 # Usage: install/build.sh OSOUT STOCK_PACKAGE OUTDIR
 #   OSOUT          the out/ directory of a KlipperSnapmakerJ1-os build
-#                  (boot/zImage, boot/snapmakerj1.dtb, boot/maint.cpio.gz,
-#                  lk2nd.img, userdata.img)
+#                  (lk2nd.img, linux-boot.img, userdata.img)
 #   STOCK_PACKAGE  an official Snapmaker update package (J1_V*.bin); its
 #                  genuine main controller firmware is reused so the stock
 #                  update flow runs normally
@@ -31,65 +30,75 @@
 set -e
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(dirname "$HERE")"
 OSOUT="$(realpath "$1")"
 STOCK="$(realpath "$2")"
 OUTDIR="$(realpath -m "$3")"
 BUILD="$OUTDIR/build"
 
-for f in boot/zImage boot/snapmakerj1.dtb boot/maint.cpio.gz lk2nd.img userdata.img; do
+for f in lk2nd.img linux-boot.img userdata.img; do
     [ -e "$OSOUT/$f" ] || { echo "missing $OSOUT/$f"; sed -n '9,16p' "$0"; exit 1; }
 done
 [ -f "$STOCK" ] || { echo "missing $STOCK"; exit 1; }
 rm -rf "$BUILD"; mkdir -p "$BUILD" "$OUTDIR/stick/install"
 STICK="$OUTDIR/stick"
 
-echo "== 1/7  maintenance system (from the build.sh output)"
-cp "$OSOUT/boot/maint.cpio.gz" "$BUILD/maint.cpio.gz"
-
 cp "$OSOUT/lk2nd.img" "$STICK/install/lk2nd.img"
 
-echo "== 2/7  OTA package (signed, recovery-trusted test key)"
+echo "== 1/6  OTA package (signed, recovery-trusted test key)"
 "$HERE/build-ota.sh" "$STICK/install/lk2nd.img" "$BUILD/klipper-ota.zip"
 
-echo "== 3/7  linux-boot image in install mode (default=maint, request=install)"
-# extlinux that boots maint by default; maint sees request=install.
-# recovery/klipper-ota.zip: a copy of the OTA package where the recovery
-# looks for it, so a recovery started again after the OTA wrote this image
-# runs the installation once more instead of looping (labelled for the
-# SELinux policy of the recovery).
-sed 's/^default .*/default maint/' "$REPO/boot/extlinux.conf" > "$BUILD/extlinux.conf"
-docker run --rm -v "$BUILD:/b" -v "$OSOUT:/os:ro" debian:bookworm bash -e -c '
+echo "== 2/6  linux-boot image in install mode (default=maint, request=install)"
+# The image of build.sh, so that both ways of installing boot the same
+# files, with: extlinux that boots maint by default; maint sees
+# request=install.  recovery/klipper-ota.zip: a copy of the OTA package
+# where the recovery looks for it, so a recovery started again after the
+# OTA wrote this image runs the installation once more instead of looping
+# (labelled for the SELinux policy of the recovery).
+cp "$OSOUT/linux-boot.img" "$BUILD/linux-boot.img"
+docker run --rm -v "$BUILD:/b" debian:bookworm bash -e -c '
 apt-get -qq update; apt-get -qq install -y --no-install-recommends e2fsprogs > /dev/null
-root=/b/bootfs
-mkdir -p $root/extlinux $root/maint $root/recovery
-cp /os/boot/zImage /os/boot/snapmakerj1.dtb /b/maint.cpio.gz $root/
-cp /b/extlinux.conf $root/extlinux/extlinux.conf
-cp /b/klipper-ota.zip $root/recovery/klipper-ota.zip
-printf install > $root/maint/request
-rm -f /b/linux-boot.img
-mke2fs -q -t ext2 -L linux_boot -d $root /b/linux-boot.img 64M
-printf "u:object_r:cache_recovery_file:s0\0" > /tmp/ctx
+img=/b/linux-boot.img
+cd /tmp
+debugfs -R "dump /extlinux/extlinux.conf extlinux.conf" $img 2> /dev/null
+sed -i "s/^default .*/default maint/" extlinux.conf
+printf install > request
+printf "u:object_r:cache_recovery_file:s0\0" > ctx
+cat > cmds <<EOF
+rm /extlinux/extlinux.conf
+write extlinux.conf /extlinux/extlinux.conf
+mkdir /maint
+write request /maint/request
+mkdir /recovery
+write /b/klipper-ota.zip /recovery/klipper-ota.zip
+ea_set -f ctx /recovery security.selinux
+ea_set -f ctx /recovery/klipper-ota.zip security.selinux
+EOF
+debugfs -w -f cmds $img > /dev/null
+# debugfs does not fail on a failed command: read everything back
+debugfs -R "cat /extlinux/extlinux.conf" $img 2> /dev/null | grep -qx "default maint"
+[ "$(debugfs -R "cat /maint/request" $img 2> /dev/null)" = install ]
+debugfs -R "dump /recovery/klipper-ota.zip ota.zip" $img 2> /dev/null
+cmp ota.zip /b/klipper-ota.zip
 for f in /recovery /recovery/klipper-ota.zip; do
-    debugfs -w -R "ea_set -f /tmp/ctx $f security.selinux" /b/linux-boot.img
+    debugfs -R "ea_list $f" $img 2> /dev/null | grep -q cache_recovery_file
 done
-debugfs -R "ea_list /recovery/klipper-ota.zip" /b/linux-boot.img
-e2fsck -fn /b/linux-boot.img > /dev/null
+debugfs -R "ea_list /recovery/klipper-ota.zip" $img
+e2fsck -fn $img > /dev/null
 '
 cp "$BUILD/linux-boot.img" "$STICK/install/linux-boot.img"
 
-echo "== 4/7  installer app (platform-key signed)"
+echo "== 3/6  installer app (platform-key signed)"
 "$HERE/build-app.sh" "$BUILD/klipper-ota.zip" "$BUILD/trigger.apk"
 
-echo "== 5/7  Snapmaker update package (stock MC + installer app)"
+echo "== 4/6  Snapmaker update package (stock MC + installer app)"
 NAME="$(basename "$STOCK")"
 python3 "$HERE/build-package.py" "$STOCK" "$BUILD/trigger.apk" "$STICK/$NAME"
 
-echo "== 6/7  Klipper root file system for the stick"
+echo "== 5/6  Klipper root file system for the stick"
 gzip -6 -c "$OSOUT/userdata.img" > "$STICK/install/rootfs.img.gz"
 ( cd "$STICK/install" && sha256sum lk2nd.img linux-boot.img rootfs.img.gz > manifest )
 
-echo "== 7/7  README and zip"
+echo "== 6/6  README and zip"
 sed 's/$/\r/' "$HERE/README.txt" > "$STICK/README-Install-Klipper.txt"
 ZIP="$OUTDIR/KlipperSnapmakerJ1-install.zip"
 rm -f "$ZIP"
