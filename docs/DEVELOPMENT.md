@@ -176,8 +176,8 @@ printer off and on: the bootloader listens for 6 s after every power up.
 
 ## Access and updates
 
-SSH: `ssh pi@snapmaker-j1.local`, password `klipper` (change it with
-`passwd`).  Without a display, a NetworkManager connection file can be
+SSH: `ssh pi@snapmaker-j1.local`, password `klipper`; the first login
+asks for a new password.  Without a display, a NetworkManager connection file can be
 added to the image before flashing
 (`/etc/NetworkManager/system-connections/`, mode 600, written with
 `debugfs -w` into `userdata.img`).

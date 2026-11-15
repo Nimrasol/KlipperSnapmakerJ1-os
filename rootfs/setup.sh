@@ -24,9 +24,11 @@ ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 # Kernel modules of the mainline kernel (boot/build.sh)
 depmod -a "$(cat /tmp/kernelrelease)"
 
-# User pi (password "klipper", change it after the first login)
+# User pi (password "klipper"; the first login asks for a new one, so
+# no printer keeps the published password)
 useradd -m -s /bin/bash -G sudo,dialout,tty,video,input,netdev,render pi
 echo "pi:klipper" | chpasswd
+passwd -e pi > /dev/null
 echo "pi ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/010_pi
 chmod 0440 /etc/sudoers.d/010_pi
 
