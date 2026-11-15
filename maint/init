@@ -19,6 +19,8 @@
 #             this request; maint finishes by writing the large rootfs.
 # Without a request it starts the Linux system again.
 export PATH=/bin:/sbin
+# A stick that fails while gunzip reads it must fail the write, not end it
+set -o pipefail
 SYSTEM=stock-restore
 STICK=/mnt/stick
 CACHE_MNT=/mnt/cache
@@ -51,16 +53,19 @@ keep_log() {
         mount -o remount,ro $STICK 2>/dev/null
     fi
 }
+# The request stays, so the next start tries again
+HINT="Nothing is lost: switch the printer off and on to try again."
 fail() {
     say ""
     say "ERROR: $*"
     say ""
-    say "Nothing is lost: switch the printer off and on to try again."
+    say "$HINT"
     keep_log
     sync
     while :; do sleep 3600; done
 }
-# Before anything is written: back to the Linux system
+# Restore, before anything is written: back to the Linux system (an
+# installation has no Linux system yet and uses fail, which tries again)
 abort() {
     say ""
     say "ERROR: $*"
@@ -150,11 +155,18 @@ do_restore() {
         seek=$((size - FOOTER / 512)) conv=fsync 2>/dev/null \
         || fail "writing the Android data failed"
 
+    # From here lk2nd, which starts this system, is overwritten: a restart
+    # no longer gets back here
     say "2/3  Android boot image..."
-    dd if=boot.img of="$BOOT" bs=1M conv=fsync 2>/dev/null \
-        || fail "writing the boot image failed"
-    cmp -n "$(wc -c < boot.img)" boot.img "$BOOT" \
-        || fail "the boot image does not verify"
+    HINT="The boot partition is not complete and a restart does not help: restore in EDL mode (docs/DEVELOPMENT.md, Installation in EDL mode)."
+    i=0
+    until dd if=boot.img of="$BOOT" bs=1M conv=fsync 2>/dev/null &&
+            cmp -n "$(wc -c < boot.img)" boot.img "$BOOT"; do
+        i=$((i + 1))
+        [ $i -lt 5 ] || fail "writing the boot image failed"
+        say "(writing the boot image failed, trying again)"
+        sleep 1
+    done
 
     # Last: the cache partition holds this maintenance system.  Android
     # starts without it, so an interruption here does no harm
@@ -178,15 +190,15 @@ do_install() {
     say ""
     say "Waiting for the USB stick..."
     mount_stick "install/manifest"
-    [ -n "$found" ] || abort "no USB stick with install/ found"
+    [ -n "$found" ] || fail "no USB stick with install/ found"
     ls -la $STICK/install >> $LOG 2>&1
 
-    cd $STICK/install || abort "cannot open install/"
+    cd $STICK/install || fail "cannot open install/"
     say "Checking the files (about a minute)..."
     sha256sum -c manifest >> $LOG 2>&1 \
-        || { tail -n 5 $LOG; abort "the files on the stick are damaged"; }
+        || { tail -n 5 $LOG; fail "the files on the stick are damaged"; }
 
-    USERDATA=$(part userdata) || abort "userdata partition not found"
+    USERDATA=$(part userdata) || fail "userdata partition not found"
 
     say "Writing the Klipper system (a few minutes)..."
     gunzip -c rootfs.img.gz | dd of="$USERDATA" bs=1M conv=fsync 2>/dev/null \
