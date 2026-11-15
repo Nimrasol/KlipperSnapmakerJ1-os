@@ -310,6 +310,22 @@ static void die(const char *msg)
     _exit(1);
 }
 
+/* A boot part could not be written: the printer no longer starts the
+   Snapmaker system, and a restart into a half written boot part helps
+   nobody.  Keep the log on the stick and the message on the screen. */
+static void die_written(const char *msg)
+{
+    ui("ERROR: %s", msg);
+    ui("The installation is incomplete and the printer cannot start.");
+    ui("Restore it in EDL mode: docs/DEVELOPMENT.md of");
+    ui("github.com/Nimrasol/KlipperSnapmakerJ1-os (Installation in EDL mode).");
+    logf_("=== end (written, failed)");
+    stick_mount();
+    stick_umount();
+    for (;;)
+        pause();
+}
+
 /* Resolve a partition by name to its /dev/block node via the by-name links,
    falling back to the PARTNAME in sysfs. */
 static int part_path(const char *name, char *out, size_t outlen)
@@ -512,6 +528,19 @@ static int write_image(const unsigned char *data, size_t len,
     return 0;
 }
 
+/* The image is in memory: try again, a write error may pass */
+static int write_retry(const unsigned char *data, size_t len,
+                       const char *partname)
+{
+    for (int i = 0; i < 10; i++) {
+        if (write_image(data, len, partname) == 0)
+            return 0;
+        ui("writing %s failed, trying again...", partname);
+        sleep(1);
+    }
+    return -1;
+}
+
 /* Try to mount any FAT USB partition that carries SRC_DIR/lk2nd.img. */
 static int mount_stick(char *dir, size_t dirlen)
 {
@@ -620,23 +649,19 @@ int main(int argc, char **argv)
     stick_umount();
 
     /* From here on boot parts get overwritten: no return to the stock
-       system is possible, so failures continue trying rather than aborting
-       to a half-written state. */
+       system is possible, so failures keep trying and never claim that
+       nothing changed (die_written, not die). */
     ui("Writing the boot loader...");
-    if (write_image(lk_data, lk_len, "boot") != 0 &&
-        write_image(lk_data, lk_len, "boot") != 0)
-        die("boot loader not written");
+    if (write_retry(lk_data, lk_len, "boot") != 0)
+        die_written("boot loader not written");
     stick_mount();                    /* keep the progress on the stick */
     stick_umount();
 
     ui("Writing the Linux boot partition...");
     if (umount("/cache") != 0)        /* drop the recovery handle on cache */
         logf_("umount /cache: %s", strerror(errno));
-    if (write_image(lb_data, lb_len, "cache") != 0) {
-        ui("FATAL: cache half written, retrying once...");
-        if (write_image(lb_data, lb_len, "cache") != 0)
-            die("Linux boot partition not written");
-    }
+    if (write_retry(lb_data, lb_len, "cache") != 0)
+        die_written("Linux boot partition not written");
 
     if (test_repeat) {
         ui("TEST: stopping here, restarting into the recovery...");
@@ -651,14 +676,12 @@ int main(int argc, char **argv)
 
     /* The recovery package was on the old cache: a recovery started again
        would find nothing and wait for a key, so the request must be gone */
-    int i;
-    for (i = 0; clear_bcb() != 0; i++) {
+    int ok;
+    for (int i = 0; !(ok = clear_bcb() == 0) && i < 10; i++) {
         ui("could not clear the recovery request, retrying...");
-        if (i >= 10)
-            break;
         sleep(1);
     }
-    logf_("recovery request %s", i <= 10 ? "cleared" : "NOT cleared");
+    logf_("recovery request %s", ok ? "cleared" : "NOT cleared");
 
     ui("Done.  Restarting into the Klipper installer...");
     /* The recovery log of this run, for a run that went wrong after all */
