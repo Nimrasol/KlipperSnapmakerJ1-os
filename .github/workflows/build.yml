@@ -69,6 +69,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # A release build takes the newest release of KlipperSnapmakerJ1, not
+      # the unreleased commits on main; main points at it, so the image
+      # tracks main as usual and the update manager offers the next release
+      - name: KlipperSnapmakerJ1 at its newest release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag=$(git -C KlipperSnapmakerJ1 describe --tags --abbrev=0 \
+              --match 'v*' --exclude '*-rc*')
+          git -C KlipperSnapmakerJ1 checkout -q -B main "$tag"
+          git -C KlipperSnapmakerJ1 log -1 --format='%h %s (%D)'
+
       - name: ARM emulation (qemu binfmt)
         uses: docker/setup-qemu-action@v3
         with:

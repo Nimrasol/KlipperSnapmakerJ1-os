@@ -24,15 +24,20 @@ if [ "$tries" -ge 3 ]; then
     echo "$(date) given up after $tries tries" >> $LOG
     exit 0
 fi
-echo $((tries + 1)) > $STATE/mcu-firmware-tries
+# Counted only when a try fails: switching the printer off during a try
+# (the screen stays dark meanwhile) must not use the tries up
+failed() {
+    echo $((tries + 1)) > $STATE/mcu-firmware-tries
+    exit 1
+}
 
 {
     echo "== $(date) try $((tries + 1))"
     if [ ! -f $IMAGE ]; then
-        runuser -u pi -- $J1/firmware/build.sh || exit 1
+        runuser -u pi -- $J1/firmware/build.sh || failed
     fi
     runuser -u pi -- /home/pi/klippy-env/bin/python \
-        $J1/scripts/snapmaker_j1_flash.py -w 30 $IMAGE || exit 1
+        $J1/scripts/snapmaker_j1_flash.py -w 30 $IMAGE || failed
     touch $STATE/mcu-firmware-done
     echo "== done"
 } >> $LOG 2>&1
