@@ -53,6 +53,11 @@ jobs:
           path: os
           persist-credentials: false
 
+      # Before the long build: what the maintenance system leaves for the
+      # next start after each way out
+      - name: Test of the maintenance system
+        run: os/maint/test.sh
+
       # With its history and tags: the image keeps it as a git repository
       # for the Moonraker update manager, on the branch it tracks
       - name: Check out KlipperSnapmakerJ1
