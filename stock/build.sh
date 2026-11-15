@@ -39,7 +39,7 @@ DUMP='/dump/$(basename "$DUMP")'
 eval \$(python3 -c '
 import sys
 sys.path.insert(0, \"/repo/tools\")
-from extract_stock import read_gpt
+from extract_partition import read_gpt
 parts = read_gpt(open(sys.argv[1], \"rb\"))
 for name in (\"boot\", \"cache\", \"userdata\"):
     print(\"%s_off=%d %s_size=%d\" % (name, parts[name][\"offset\"],
