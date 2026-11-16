@@ -15,7 +15,9 @@ def free_ranges(image):
                          text=True, check=True).stdout
     bsize = int(re.search(r"^Block size:\s*(\d+)", out, re.M).group(1))
     ranges = []
-    for line in re.findall(r"^\s*Free blocks: (.+)$", out, re.M):
+    # The indented lines of the groups (the summary line at the top has
+    # the count of free blocks, not a block number)
+    for line in re.findall(r"^ +Free blocks: (.+)$", out, re.M):
         for part in line.split(", "):
             first, _, last = part.partition("-")
             ranges.append((int(first), int(last or first)))

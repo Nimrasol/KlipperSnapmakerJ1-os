@@ -30,6 +30,8 @@ failed() {
     echo $((tries + 1)) > $STATE/mcu-firmware-tries
     exit 1
 }
+# A try that hangs until systemd stops it (TimeoutStartSec) counts too
+trap failed TERM
 
 {
     echo "== $(date) try $((tries + 1))"
