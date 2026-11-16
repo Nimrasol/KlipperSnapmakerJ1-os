@@ -70,7 +70,7 @@ abort() {
     # An earlier run already wrote the Android data: the Linux system is
     # gone, only a complete restore (the request stays) gets out of here
     if [ -e $CACHE_MNT/maint/written ]; then
-        HINT="The Klipper system is already overwritten: plug in the USB stick with stock-restore/ and switch the printer off and on."
+        HINT="The Klipper system is already overwritten: plug in a USB stick with an intact stock-restore/ and switch the printer off and on."
         fail "$*"
     fi
     say ""

@@ -65,6 +65,15 @@ setup() {
 
     [ "$3" = none ] && return 0
     touch "$r/stick-present"
+    # The Snapmaker system of the stock firmware stick (stock/build.sh)
+    local k="$r/mnt/stick/stock-restore"
+    mkdir -p "$k"
+    gzip -c /tmp/rootfs.img > "$k/userdata.img.gz"
+    head -c 16384 /dev/urandom > "$k/userdata-footer.bin"
+    head -c 65536 /dev/urandom > "$k/boot.img"
+    head -c 65536 /dev/urandom | gzip -c > "$k/cache.img.gz"
+    (cd "$k" && sha256sum boot.img userdata.img.gz userdata-footer.bin \
+        cache.img.gz > manifest)
     local s="$r/mnt/stick/install"
     mkdir -p "$s"
     gzip -c /tmp/rootfs.img > "$s/rootfs.img.gz"
@@ -103,6 +112,9 @@ check install-bad-sum      install  badsum     halt    maint    yes
 check install-stick-error  install  truncated  halt    maint    yes
 check install-ok           install  ok         reboot  j1       no
 check restore-no-stick     restore  none       reboot  j1       yes
+# A complete restore: written over the cache in the end (here a file, so
+# the extlinux.conf and request of the test stay as they were)
+check restore-ok           restore  ok         reboot  maint    yes
 WRITTEN=1 check restore-cut-no-stick \
                            restore  none       halt    maint    yes
 check no-request           ""       none       reboot  j1       no
@@ -110,4 +122,10 @@ check no-request           ""       none       reboot  j1       no
 # The Klipper system lands on userdata as it is
 cmp /tmp/rootfs.img /t/install-ok/dev/mmcblk0p2 && echo "ok    install-ok writes userdata" \
     || { echo "FAIL  install-ok: userdata differs from the image"; FAILED=1; }
+# The restore lands on userdata (with the footer at its end) and boot
+R=/t/restore-ok
+cmp -n 1048576 /tmp/rootfs.img $R/dev/mmcblk0p2 \
+    && cmp $R/mnt/stick/stock-restore/boot.img $R/dev/mmcblk0p3 \
+    && echo "ok    restore-ok writes userdata and boot" \
+    || { echo "FAIL  restore-ok: userdata or boot differ"; FAILED=1; }
 exit $FAILED
