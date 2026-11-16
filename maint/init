@@ -67,6 +67,9 @@ fail() {
 # Restore, before anything is written: back to the Linux system (an
 # installation has no Linux system yet and uses fail, which tries again)
 abort() {
+    # An earlier run already wrote the Android data: the Linux system is
+    # gone, only a complete restore (the request stays) gets out of here
+    [ -e $CACHE_MNT/maint/written ] && fail "$*"
     say ""
     say "ERROR: $*"
     # Only the restore aborts: the main controller already got the
@@ -152,6 +155,10 @@ do_restore() {
     BOOT=$(part boot) || abort "boot partition not found"
 
     say "1/3  Android data (a few minutes)..."
+    # From here the Linux system is overwritten (abort no longer returns
+    # to it); step 3 overwrites the cache and with it this marker
+    touch $CACHE_MNT/maint/written
+    sync
     gunzip -c userdata.img.gz | dd of="$USERDATA" bs=1M conv=fsync 2>/dev/null \
         || fail "writing the Android data failed"
     size=$(cat /sys/class/block/${USERDATA#/dev/}/size)

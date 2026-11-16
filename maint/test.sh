@@ -60,6 +60,8 @@ setup() {
     printf 'default maint\nlabel j1\nlabel maint\n' \
         > "$r/mnt/cache/extlinux/extlinux.conf"
     [ -z "$2" ] || printf '%s' "$2" > "$r/mnt/cache/maint/request"
+    # WRITTEN=1: an earlier restore run was cut after writing userdata
+    [ -z "$WRITTEN" ] || touch "$r/mnt/cache/maint/written"
 
     [ "$3" = none ] && return 0
     touch "$r/stick-present"
@@ -101,6 +103,8 @@ check install-bad-sum      install  badsum     halt    maint    yes
 check install-stick-error  install  truncated  halt    maint    yes
 check install-ok           install  ok         reboot  j1       no
 check restore-no-stick     restore  none       reboot  j1       yes
+WRITTEN=1 check restore-cut-no-stick \
+                           restore  none       halt    maint    yes
 check no-request           ""       none       reboot  j1       no
 
 # The Klipper system lands on userdata as it is

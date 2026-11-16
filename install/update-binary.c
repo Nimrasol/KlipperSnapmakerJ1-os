@@ -551,8 +551,9 @@ static int mount_stick(char *dir, size_t dirlen)
         while (d && (e = readdir(d))) {
             if (e->d_name[0] != 's' || e->d_name[1] != 'd')
                 continue;                 /* sd* only (USB mass storage) */
-            if (!e->d_name[2])
-                continue;                 /* skip whole disk sda, want sda1 */
+            /* Whole disks too: a stick formatted without a partition
+               table (Android accepts it) is FAT on sda itself; a disk
+               with partitions does not mount as vfat */
             snprintf(g_stick_dev, sizeof(g_stick_dev), "%s/%s", BLOCK_DIR,
                      e->d_name);
             umount(USB_DIR);
