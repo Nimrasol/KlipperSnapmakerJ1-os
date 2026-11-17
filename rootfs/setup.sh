@@ -28,7 +28,6 @@ depmod -a "$(cat /tmp/kernelrelease)"
 # no printer keeps the published password)
 useradd -m -s /bin/bash -G sudo,dialout,tty,video,input,netdev,render pi
 echo "pi:klipper" | chpasswd
-passwd -e pi > /dev/null
 echo "pi ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/010_pi
 chmod 0440 /etc/sudoers.d/010_pi
 
@@ -189,6 +188,10 @@ su pi -c "$J1/firmware/build.sh" > /dev/null
     done
     echo "mainsail $MAINSAIL_VERSION"
 } > /etc/klipper-os-release
+
+# Last: an expired password stops su pi above (sudo -n, runuser and the
+# services are not affected)
+passwd -e pi > /dev/null
 
 apt-get clean
 rm -rf /var/lib/apt/lists/* /root/.cache $HOME_DIR/.cache
